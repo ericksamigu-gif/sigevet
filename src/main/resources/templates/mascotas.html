@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Mascotas - SIGEVET</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: #f4f7f8;
+        }
+
+        .header {
+            background: white;
+            padding: 25px 40px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .header h1 {
+            margin: 0;
+            color: #0f3d3e;
+        }
+
+        .container {
+            padding: 40px;
+        }
+
+        .table-container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #0f3d3e;
+            color: white;
+            padding: 14px;
+            text-align: left;
+        }
+
+        td {
+            padding: 14px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:hover {
+            background: #f1f5f5;
+        }
+
+        .volver {
+            display: inline-block;
+            margin-bottom: 20px;
+            text-decoration: none;
+            color: white;
+            background: #0f3d3e;
+            padding: 10px 18px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>Gestión de Mascotas</h1>
+    </div>
+
+    <div class="container">
+
+        <a href="/" class="volver">← Volver al Dashboard</a>
+
+        <div class="table-container">
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Especie</th>
+                        <th>Raza</th>
+                        <th>Fecha de nacimiento</th>
+                        <th>Género</th>
+                        <th>Peso</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    <tr th:each="mascota : ${mascotas}">
+
+                        <td th:text="${mascota.id}"></td>
+
+                        <td th:text="${mascota.nombre}"></td>
+
+                        <td th:text="${mascota.especie}"></td>
+
+                        <td th:text="${mascota.raza}"></td>
+
+                        <td th:text="${mascota.fechaNacimiento}"></td>
+
+                        <td th:text="${mascota.genero}"></td>
+
+                        <td th:text="${mascota.peso}"></td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>

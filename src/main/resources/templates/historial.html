@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial Médico - SIGEVET</title>
+</head>
+
+<body>
+
+    <h1>Historial Médico</h1>
+
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>Diagnóstico</th>
+                <th>Tratamiento</th>
+                <th>Vacunas</th>
+                <th>Alergias</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            <tr th:each="atencion : ${atenciones}">
+                <td th:text="${atencion.id}"></td>
+                <td th:text="${atencion.fecha}"></td>
+                <td th:text="${atencion.diagnostico}"></td>
+                <td th:text="${atencion.tratamiento}"></td>
+                <td th:text="${atencion.vacunas}"></td>
+                <td th:text="${atencion.alergias}"></td>
+            </tr>
+        </tbody>
+    </table>
+
+</body>
+</html>

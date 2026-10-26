@@ -1,326 +1,101 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>SIGEVET - Panel Principal</title>
-
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-        }
-
-        body {
-            background: #f4f7f8;
-            color: #222;
-        }
-
-        .layout {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        /* BARRA LATERAL */
-        .sidebar {
-            width: 250px;
-            background: #0f3d3e;
-            color: white;
-            padding: 30px 20px;
-        }
-
-        .sidebar h1 {
-            font-size: 32px;
-            margin-bottom: 8px;
-        }
-
-        .sidebar p {
-            color: #b9dddd;
-            margin-bottom: 50px;
-        }
-
-        .menu {
-            list-style: none;
-        }
-
-        .menu li {
-            margin-bottom: 15px;
-        }
-
-        .menu a {
-            display: block;
-            text-decoration: none;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 10px;
-            font-size: 18px;
-        }
-
-        .menu a:hover,
-        .menu .active {
-            background: #1d7373;
-        }
-
-        /* CONTENIDO */
-        .content {
-            flex: 1;
-        }
-
-        /* CABECERA */
-        .header {
-            height: 105px;
-            background: white;
-            border-bottom: 1px solid #ddd;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 40px;
-        }
-
-        .header h2 {
-            font-size: 34px;
-            color: #222;
-        }
-
-        .user {
-            background: #e8f2f2;
-            color: #0f3d3e;
-            padding: 15px 25px;
-            border-radius: 30px;
-            font-weight: bold;
-            font-size: 16px;
-        }
-
-        /* CONTENIDO PRINCIPAL */
-        .main {
-            padding: 45px;
-        }
-
-        .welcome {
-            background: white;
-            padding: 35px;
-            border-radius: 16px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            margin-bottom: 35px;
-        }
-
-        .welcome h2 {
-            color: #0f3d3e;
-            margin-bottom: 12px;
-            font-size: 26px;
-        }
-
-        .welcome p {
-            color: #607d8b;
-            font-size: 18px;
-            line-height: 1.5;
-        }
-
-        .role {
-            margin-top: 10px;
-        }
-
-        .role strong {
-            color: #0f3d3e;
-        }
-
-        /* TARJETAS */
-        .cards {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 25px;
-        }
-
-        .card {
-            background: white;
-            padding: 35px;
-            border-radius: 16px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-        }
-
-        .card h3 {
-            color: #607d8b;
-            font-size: 20px;
-            margin-bottom: 20px;
-        }
-
-        .card .number {
-            font-size: 42px;
-            font-weight: bold;
-            color: #0f3d3e;
-        }
-
-        /* RESPONSIVE */
-        @media (max-width: 1000px) {
-            .cards {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 700px) {
-            .layout {
-                flex-direction: column;
-            }
-
-            .sidebar {
-                width: 100%;
-            }
-
-            .cards {
-                grid-template-columns: 1fr;
-            }
-
-            .header {
-                padding: 20px;
-            }
-
-            .main {
-                padding: 20px;
-            }
-        }
-    </style>
-</head>
+<head th:replace="~{fragments/layout :: head('Panel Principal - SIGEVET')}"></head>
 
 <body>
 
-<div class="layout">
+<div class="app-layout">
 
-    <!-- BARRA LATERAL -->
-    <aside class="sidebar">
+    <!-- ================= BARRA LATERAL (PERSISTENTE) ================= -->
+    <aside th:replace="~{fragments/layout :: sidebar('inicio')}"></aside>
 
-        <h1>SIGEVET</h1>
+    <!-- ================= CONTENIDO PRINCIPAL ================= -->
+    <div class="main-wrapper">
 
-        <p>Gestión veterinaria</p>
+        <!-- BARRA SUPERIOR -->
+        <header th:replace="~{fragments/layout :: topbar('Buscar pacientes, citas, propietarios, teléfono...')}"></header>
 
-        <ul class="menu">
+        <!-- CUERPO DEL DASHBOARD -->
+        <main class="content-body">
 
-            <li>
-                <a href="/" class="active">Inicio</a>
-            </li>
-
-            <li>
-                <a href="/clientes">Clientes</a>
-            </li>
-
-            <li>
-                <a href="/mascotas">Mascotas</a>
-            </li>
-
-            <li>
-                <a href="/citas">Citas</a>
-            </li>
-
-            <li>
-                <a href="/historial">Historial</a>
-            </li>
-
-            <li>
-                <a href="#">Reportes</a>
-            </li>
-
-        </ul>
-
-    </aside>
-
-
-    <!-- CONTENIDO -->
-    <div class="content">
-
-        <!-- CABECERA -->
-        <header class="header">
-
-            <h2>Panel principal</h2>
-
-            <div class="user">
-
-                <span th:if="${usuario != null}"
-                      th:text="${usuario.nombre + ' ' + usuario.apellido}">
-                </span>
-
-                <span th:if="${usuario == null}">
-                    Usuario
-                </span>
-
-            </div>
-
-        </header>
-
-
-        <!-- CONTENIDO PRINCIPAL -->
-        <main class="main">
-
-            <!-- BIENVENIDA -->
-            <section class="welcome">
-
-                <h2 th:if="${usuario != null}">
-                    Bienvenido,
-                    <span th:text="${usuario.nombre + ' ' + usuario.apellido}">
-                    </span>
-                </h2>
-
-                <p th:if="${usuario != null}" class="role">
-                    Rol:
-                    <strong th:text="${usuario.rol}"></strong>
-                </p>
-
-                <p>
-                    Sistema de Gestión Integral y Automatización de Procesos
-                    para Clínicas Veterinarias.
-                </p>
-
+            <!-- TARJETA BIENVENIDA -->
+            <section class="welcome-card">
+                <div class="welcome-text">
+                    <h2>
+                        ¡Bienvenido a SIGEVET, 
+                        <span th:if="${usuario != null}" th:text="${usuario.nombre}">Usuario</span>!
+                    </h2>
+                    <p>Sistema de Gestión de Veterinaria.</p>
+                    <span class="role-pill" th:if="${usuario != null}" th:text="'Rol: ' + ${usuario.rol}">Rol: ACTIVO</span>
+                </div>
             </section>
 
-
-            <!-- TARJETAS -->
-            <section class="cards">
-
-                <div class="card">
-
-                    <h3>Clientes</h3>
-
-                    <div class="number">
-                        0
+            <!-- KPIS GENERALES -->
+            <section class="metrics-grid">
+                <a href="/clientes" class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">GESTIÓN CLIENTES</span>
+                        <span class="metric-value" id="dashClientes">0</span>
+                        <span class="metric-subtext">Directorio de propietarios</span>
                     </div>
+                    <div class="metric-icon-wrap icon-green">👥</div>
+                </a>
 
+                <a href="/mascotas" class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">MASCOTAS ACTIVAS</span>
+                        <span class="metric-value" id="dashMascotas">0</span>
+                        <span class="metric-subtext">Pacientes censados</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-blue">🐾</div>
+                </a>
+
+                <a href="/citas" class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">CITAS PROGRAMADAS</span>
+                        <span class="metric-value" id="dashCitas">0</span>
+                        <span class="metric-subtext">Turnos médicos</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-purple">📅</div>
+                </a>
+
+                <a href="/historial" class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">ATENCIONES MÉDICAS</span>
+                        <span class="metric-value" id="dashAtenciones">0</span>
+                        <span class="metric-subtext">Consultas realizadas</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-red">🩺</div>
+                </a>
+            </section>
+
+            <!-- ACCESOS RÁPIDOS A MÓDULOS -->
+            <h3 style="font-size:18px; font-weight:800; margin-bottom:16px; color:#0f172a;">Módulos del Sistema</h3>
+            <section class="quick-modules-grid">
+                <div class="module-card">
+                    <div>
+                        <h3><span>👥</span> Directorio de Clientes</h3>
+                        <p>Mantenimiento integral de propietarios, actualización de teléfonos, domicilios y consulta de mascotas a su cargo.</p>
+                    </div>
+                    <a href="/clientes" class="btn-access">Ingresar a Clientes ➜</a>
                 </div>
 
-
-                <div class="card">
-
-                    <h3>Mascotas</h3>
-
-                    <div class="number">
-                        0
+                <div class="module-card">
+                    <div>
+                        <h3><span>🐾</span> Registro de Mascotas</h3>
+                        <p>Fichas individuales de caninos, felinos y especies con historial de raza, fecha de nacimiento, género y peso.</p>
                     </div>
-
+                    <a href="/mascotas" class="btn-access">Ingresar a Mascotas ➜</a>
                 </div>
 
-
-                <div class="card">
-
-                    <h3>Citas de hoy</h3>
-
-                    <div class="number">
-                        0
+                <div class="module-card">
+                    <div>
+                        <h3><span>📅</span> Agenda de Citas</h3>
+                        <p>Programación de turnos, asignación de veterinarios de guardia y control de estados en sala de espera.</p>
                     </div>
-
+                    <a href="/citas" class="btn-access">Ingresar a Citas ➜</a>
                 </div>
-
-
-                <div class="card">
-
-                    <h3>Atenciones</h3>
-
-                    <div class="number">
-                        0
-                    </div>
-
-                </div>
-
             </section>
 
         </main>
@@ -329,6 +104,23 @@
 
 </div>
 
-</body>
+<script>
+    // Carga dinámica de estadísticas en el panel de inicio
+    document.addEventListener("DOMContentLoaded", async () => {
+        try {
+            const resp = await fetch('/api/dashboard/estadisticas');
+            if (resp.ok) {
+                const stats = await resp.json();
+                document.getElementById('dashClientes').textContent = stats.totalClientes || 0;
+                document.getElementById('dashMascotas').textContent = stats.totalMascotas || 0;
+                document.getElementById('dashCitas').textContent = stats.citasProgramadas || 0;
+                document.getElementById('dashAtenciones').textContent = stats.totalAtenciones || 0;
+            }
+        } catch (e) {
+            console.error("Error al cargar KPIs del dashboard:", e);
+        }
+    });
+</script>
 
+</body>
 </html>

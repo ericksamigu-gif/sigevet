@@ -1,37 +1,574 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clientes - SIGEVET</title>
-</head>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/layout :: head('Gestión de Clientes - SIGEVET')}"></head>
+
 <body>
 
-<h1>Clientes</h1>
+<div class="app-layout">
 
-<table border="1">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Nombre</th>
-            <th>Apellido</th>
-            <th>Teléfono</th>
-            <th>Correo</th>
-            <th>Dirección</th>
-        </tr>
-    </thead>
+    <!-- ================= BARRA LATERAL (PERSISTENTE) ================= -->
+    <aside th:replace="~{fragments/layout :: sidebar('clientes')}"></aside>
 
-    <tbody>
-        <tr th:each="cliente : ${clientes}">
-            <td th:text="${cliente.id}"></td>
-            <td th:text="${cliente.nombre}"></td>
-            <td th:text="${cliente.apellido}"></td>
-            <td th:text="${cliente.telefono}"></td>
-            <td th:text="${cliente.correo}"></td>
-            <td th:text="${cliente.direccion}"></td>
-        </tr>
-    </tbody>
-</table>
+    <!-- ================= CONTENIDO PRINCIPAL ================= -->
+    <div class="main-wrapper">
+
+        <!-- BARRA SUPERIOR -->
+        <header th:replace="~{fragments/layout :: topbar('Buscar pacientes, citas, propietarios, teléfono...')}"></header>
+
+        <!-- CUERPO DE LA PÁGINA -->
+        <main class="content-body">
+
+            <!-- TÍTULO Y ACCIONES -->
+            <div class="page-header-row">
+                <div class="page-title-group">
+                    <h1>
+                        Gestión de Clientes
+                        <span class="badge-live">En vivo</span>
+                    </h1>
+                    <p>Directorio de propietarios, historial de visitas y datos de contacto en tiempo real.</p>
+                </div>
+
+                <div class="header-actions">
+                    <button class="btn-secondary" onclick="recargarClientes()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6"></path>
+                            <path d="M1 20v-6h6"></path>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        Refrescar
+                    </button>
+
+                    <button class="btn-primary" onclick="abrirModalCrear()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Nuevo Cliente
+                    </button>
+                </div>
+            </div>
+
+            <!-- TARJETAS MÉTRICAS (KPIS) -->
+            <section class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">TOTAL CLIENTES</span>
+                        <span class="metric-value" id="kpiTotalClientes">0</span>
+                        <span class="metric-subtext">Registrados en clínica</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-green">👥</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">CON MASCOTAS</span>
+                        <span class="metric-value" id="kpiConMascotas">0</span>
+                        <span class="metric-subtext">Pacientes activos</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-blue">🐾</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">SIN MASCOTAS</span>
+                        <span class="metric-value" id="kpiSinMascotas">0</span>
+                        <span class="metric-subtext">Nuevos registros</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-purple">⏳</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">TOTAL MASCOTAS</span>
+                        <span class="metric-value" id="kpiTotalMascotas">0</span>
+                        <span class="metric-subtext">Censo de pacientes</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-red">📋</div>
+                </div>
+            </section>
+
+            <!-- TABLA DE CLIENTES -->
+            <div class="data-card">
+                <div class="data-header">
+                    <div class="filter-input-wrap">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="filtroTabla" placeholder="Buscar por DNI, nombres, teléfono o correo..." oninput="filtrarTabla(this.value)">
+                    </div>
+
+                    <div class="data-stats-text" id="statsContador">
+                        Cargando clientes...
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>CLIENTE</th>
+                                <th>DNI / ID</th>
+                                <th>TELÉFONO</th>
+                                <th>CORREO ELECTRÓNICO</th>
+                                <th>DIRECCIÓN</th>
+                                <th>MASCOTAS</th>
+                                <th style="text-align: right;">ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaClientesBody">
+                            <tr>
+                                <td colspan="7" class="empty-state">
+                                    Cargando clientes desde el servidor...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+</div>
+
+<!-- ================= MODAL DE REGISTRO / EDICIÓN ================= -->
+<div class="modal-overlay" id="modalCliente">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3 id="modalTitulo">
+                <span>👤</span> Registrar Nuevo Cliente
+            </h3>
+            <button class="btn-close-modal" onclick="cerrarModalCliente()">&times;</button>
+        </div>
+
+        <form id="formCliente" onsubmit="guardarCliente(event)">
+            <input type="hidden" id="clienteId">
+
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="inputDni">DNI / Documento *</label>
+                        <input type="text" id="inputDni" placeholder="Ej: 74859632" required maxlength="20">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputTelefono">Teléfono / Celular</label>
+                        <input type="text" id="inputTelefono" placeholder="Ej: 987654321" maxlength="20">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="inputNombre">Nombres *</label>
+                        <input type="text" id="inputNombre" placeholder="Ej: Carlos" required maxlength="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputApellido">Apellidos *</label>
+                        <input type="text" id="inputApellido" placeholder="Ej: Ramírez" required maxlength="100">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="inputCorreo">Correo Electrónico</label>
+                    <input type="email" id="inputCorreo" placeholder="ejemplo@correo.com" maxlength="100">
+                </div>
+
+                <div class="form-group">
+                    <label for="inputDireccion">Dirección de Residencia</label>
+                    <input type="text" id="inputDireccion" placeholder="Av. Principal 123, Lima" maxlength="255">
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="cerrarModalCliente()">Cancelar</button>
+                <button type="submit" class="btn-primary" id="btnGuardar">Guardar Cliente</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ================= MODAL MASCOTAS DEL CLIENTE ================= -->
+<div class="modal-overlay" id="modalMascotas">
+    <div class="modal-container" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3 id="modalMascotasTitulo">
+                <span>🐾</span> Mascotas del Propietario
+            </h3>
+            <button class="btn-close-modal" onclick="cerrarModalMascotas()">&times;</button>
+        </div>
+
+        <div class="modal-body">
+            <div id="listaMascotasDetalle">
+                Cargando mascotas...
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="cerrarModalMascotas()">Cerrar</button>
+            <a href="/mascotas" class="btn-primary" style="text-decoration:none;">Ir a Gestión de Mascotas ➜</a>
+        </div>
+    </div>
+</div>
+
+<!-- CONTENEDOR DE NOTIFICACIONES TOAST -->
+<div th:replace="~{fragments/layout :: toastContainer}"></div>
+
+<!-- ================= JAVASCRIPT DINÁMICO (PATRÓN MVC REST) ================= -->
+<script>
+    // Variables de estado
+    let clientesGlobal = [];
+
+    // Inicializar al cargar el DOM
+    document.addEventListener("DOMContentLoaded", () => {
+        cargarClientes();
+        cargarEstadisticas();
+    });
+
+    /**
+     * Consume la API REST GET /api/clientes
+     */
+    async function cargarClientes(filtro = "") {
+        try {
+            const url = filtro ? `/api/clientes?buscar=${encodeURIComponent(filtro)}` : '/api/clientes';
+            const response = await fetch(url, {
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (response.status === 401) {
+                window.location.href = '/login?auth=required';
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error("Error en la respuesta del servidor");
+            }
+
+            clientesGlobal = await response.json();
+            renderizarTabla(clientesGlobal);
+        } catch (error) {
+            console.error("Error al obtener clientes:", error);
+            mostrarToast("Error al cargar lista de clientes", "error");
+        }
+    }
+
+    /**
+     * Consume la API REST GET /api/clientes/estadisticas
+     */
+    async function cargarEstadisticas() {
+        try {
+            const response = await fetch('/api/clientes/estadisticas');
+            if (response.ok) {
+                const stats = await response.json();
+                document.getElementById('kpiTotalClientes').textContent = stats.totalClientes || 0;
+                document.getElementById('kpiConMascotas').textContent = stats.conMascotas || 0;
+                document.getElementById('kpiSinMascotas').textContent = stats.sinMascotas || 0;
+                document.getElementById('kpiTotalMascotas').textContent = stats.totalMascotas || 0;
+            }
+        } catch (error) {
+            console.error("Error al cargar estadísticas:", error);
+        }
+    }
+
+    /**
+     * Renderiza las filas en la tabla HTML de clientes
+     */
+    function renderizarTabla(lista) {
+        const tbody = document.getElementById('tablaClientesBody');
+        const stats = document.getElementById('statsContador');
+        tbody.innerHTML = '';
+
+        stats.textContent = `Mostrando ${lista.length} de ${clientesGlobal.length} clientes`;
+
+        if (lista.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="8" y1="12" x2="16" y2="12"></line>
+                        </svg>
+                        <p>No se encontraron clientes registrados con los criterios indicados.</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        lista.forEach(cliente => {
+            const tr = document.createElement('tr');
+            const iniciales = `${(cliente.nombre || '').charAt(0)}${(cliente.apellido || '').charAt(0)}`.toUpperCase();
+            const tieneMascotas = cliente.cantidadMascotas > 0;
+
+            tr.innerHTML = `
+                <td>
+                    <div class="client-avatar-cell">
+                        <div class="client-avatar">${iniciales}</div>
+                        <div>
+                            <div class="client-name-bold">${cliente.nombre} ${cliente.apellido}</div>
+                            <small style="color:#94a3b8">Registrado en SIGEVET</small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="dni-badge">${cliente.dni || 'S/D'}</span>
+                </td>
+                <td>${cliente.telefono || '<span style="color:#94a3b8">Sin teléfono</span>'}</td>
+                <td>${cliente.correo || '<span style="color:#94a3b8">Sin correo</span>'}</td>
+                <td>${cliente.direccion || '<span style="color:#94a3b8">Sin dirección</span>'}</td>
+                <td>
+                    <button class="badge-mascotas ${tieneMascotas ? '' : 'badge-cero'}" onclick="verMascotas(${cliente.id}, '${cliente.nombre} ${cliente.apellido}')">
+                        🐾 ${cliente.cantidadMascotas} ${cliente.cantidadMascotas === 1 ? 'mascota' : 'mascotas'}
+                    </button>
+                </td>
+                <td style="text-align: right;">
+                    <div class="action-buttons" style="justify-content: flex-end;">
+                        <button class="btn-table-action" title="Editar datos" onclick="abrirModalEditar(${cliente.id})">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        <button class="btn-table-action delete" title="Eliminar cliente" onclick="confirmarEliminar(${cliente.id}, '${cliente.nombre} ${cliente.apellido}', ${cliente.cantidadMascotas})">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    /**
+     * Búsqueda en tiempo real desde input
+     */
+    function filtrarTabla(query) {
+        const q = (query || '').toLowerCase().trim();
+        if (!q) {
+            renderizarTabla(clientesGlobal);
+            return;
+        }
+
+        const filtrados = clientesGlobal.filter(c => 
+            (c.nombre && c.nombre.toLowerCase().includes(q)) ||
+            (c.apellido && c.apellido.toLowerCase().includes(q)) ||
+            (c.dni && c.dni.toLowerCase().includes(q)) ||
+            (c.telefono && c.telefono.toLowerCase().includes(q)) ||
+            (c.correo && c.correo.toLowerCase().includes(q))
+        );
+
+        renderizarTabla(filtrados);
+    }
+
+    function filtrarGlobal(query) {
+        document.getElementById('filtroTabla').value = query;
+        filtrarTabla(query);
+    }
+
+    function recargarClientes() {
+        document.getElementById('filtroTabla').value = '';
+        document.getElementById('globalSearch').value = '';
+        cargarClientes();
+        cargarEstadisticas();
+        mostrarToast("Lista actualizada correctamente", "success");
+    }
+
+    /**
+     * Abrir Modal en modo CREACIÓN
+     */
+    function abrirModalCrear() {
+        document.getElementById('formCliente').reset();
+        document.getElementById('clienteId').value = '';
+        document.getElementById('modalTitulo').innerHTML = '<span>➕</span> Registrar Nuevo Cliente';
+        document.getElementById('btnGuardar').textContent = 'Guardar Cliente';
+        document.getElementById('modalCliente').classList.add('active');
+        document.getElementById('inputDni').focus();
+    }
+
+    /**
+     * Abrir Modal en modo EDICIÓN
+     */
+    async function abrirModalEditar(id) {
+        try {
+            const resp = await fetch(`/api/clientes/${id}`);
+            if (!resp.ok) throw new Error("No se pudo obtener el cliente");
+            const cliente = await resp.json();
+
+            document.getElementById('clienteId').value = cliente.id;
+            document.getElementById('inputDni').value = cliente.dni || '';
+            document.getElementById('inputNombre').value = cliente.nombre || '';
+            document.getElementById('inputApellido').value = cliente.apellido || '';
+            document.getElementById('inputTelefono').value = cliente.telefono || '';
+            document.getElementById('inputCorreo').value = cliente.correo || '';
+            document.getElementById('inputDireccion').value = cliente.direccion || '';
+
+            document.getElementById('modalTitulo').innerHTML = '<span>✏️</span> Editar Cliente';
+            document.getElementById('btnGuardar').textContent = 'Actualizar Cambios';
+            document.getElementById('modalCliente').classList.add('active');
+        } catch (error) {
+            mostrarToast("Error al cargar datos del cliente", "error");
+        }
+    }
+
+    function cerrarModalCliente() {
+        document.getElementById('modalCliente').classList.remove('active');
+    }
+
+    /**
+     * Guardar Cliente (POST o PUT a la API REST)
+     */
+    async function guardarCliente(e) {
+        e.preventDefault();
+
+        const id = document.getElementById('clienteId').value;
+        const payload = {
+            dni: document.getElementById('inputDni').value.trim(),
+            nombre: document.getElementById('inputNombre').value.trim(),
+            apellido: document.getElementById('inputApellido').value.trim(),
+            telefono: document.getElementById('inputTelefono').value.trim(),
+            correo: document.getElementById('inputCorreo').value.trim(),
+            direccion: document.getElementById('inputDireccion').value.trim()
+        };
+
+        const esEdicion = !!id;
+        const url = esEdicion ? `/api/clientes/${id}` : '/api/clientes';
+        const method = esEdicion ? 'PUT' : 'POST';
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                mostrarToast(data.error || "Ocurrió un error al guardar", "error");
+                return;
+            }
+
+            cerrarModalCliente();
+            mostrarToast(esEdicion ? "Cliente actualizado exitosamente" : "Cliente registrado exitosamente", "success");
+            cargarClientes();
+            cargarEstadisticas();
+        } catch (error) {
+            console.error("Error al guardar:", error);
+            mostrarToast("Error de conexión con el servidor", "error");
+        }
+    }
+
+    /**
+     * Confirmar y eliminar cliente
+     */
+    async function confirmarEliminar(id, nombre, totalMascotas) {
+        if (totalMascotas > 0) {
+            alert(`No se puede eliminar a "${nombre}" porque tiene ${totalMascotas} mascota(s) registrada(s). Debe reasignar o eliminar las mascotas primero.`);
+            return;
+        }
+
+        const confirmar = confirm(`¿Está seguro de que desea eliminar a "${nombre}" del sistema?`);
+        if (!confirmar) return;
+
+        try {
+            const resp = await fetch(`/api/clientes/${id}`, {
+                method: 'DELETE',
+                headers: { 'Accept': 'application/json' }
+            });
+
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                mostrarToast(data.error || "Error al eliminar", "error");
+                return;
+            }
+
+            mostrarToast("Cliente eliminado correctamente", "success");
+            cargarClientes();
+            cargarEstadisticas();
+        } catch (error) {
+            mostrarToast("Error al procesar la eliminación", "error");
+        }
+    }
+
+    /**
+     * Ver mascotas de un cliente en modal
+     */
+    async function verMascotas(clienteId, nombreCliente) {
+        document.getElementById('modalMascotasTitulo').innerHTML = `<span>🐾</span> Mascotas de ${nombreCliente}`;
+        const container = document.getElementById('listaMascotasDetalle');
+        container.innerHTML = '<p style="color:#64748b; text-align:center;">Consultando expediente de mascotas...</p>';
+        document.getElementById('modalMascotas').classList.add('active');
+
+        try {
+            const resp = await fetch(`/api/clientes/${clienteId}/mascotas`);
+            if (!resp.ok) throw new Error("Error al consultar mascotas");
+            const mascotas = await resp.json();
+
+            if (mascotas.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center; padding: 20px; color:#64748b;">
+                        <p>Este cliente aún no tiene mascotas vinculadas.</p>
+                        <small>Puedes ingresar a la sección Mascotas para registrar una nueva.</small>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
+            mascotas.forEach(m => {
+                html += `
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <strong style="color:#0f172a; font-size:15px;">${m.nombre}</strong>
+                            <div style="color:#64748b; font-size:13px;">${m.especie || 'Especie N/D'} • ${m.raza || 'Raza N/D'}</div>
+                        </div>
+                        <div style="text-align:right; font-size:13px; color:#475569;">
+                            <span>Género: <strong>${m.genero || 'N/D'}</strong></span><br>
+                            <span>Peso: <strong>${m.peso ? m.peso + ' kg' : 'N/D'}</strong></span>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        } catch (error) {
+            container.innerHTML = '<p style="color:#ef4444; text-align:center;">Error al cargar las mascotas.</p>';
+        }
+    }
+
+    function cerrarModalMascotas() {
+        document.getElementById('modalMascotas').classList.remove('active');
+    }
+
+    /**
+     * Sistema de Notificaciones Toast
+     */
+    function mostrarToast(mensaje, tipo = "info") {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast ${tipo}`;
+        toast.innerHTML = `
+            <span>${mensaje}</span>
+            <span style="cursor:pointer; margin-left:12px;" onclick="this.parentElement.remove()">&times;</span>
+        `;
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        }, 3500);
+    }
+</script>
 
 </body>
 </html>

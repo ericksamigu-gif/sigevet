@@ -1,301 +1,532 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Citas - SIGEVET</title>
-
-    <style>
-        * {
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
-
-        body {
-            margin: 0;
-            background: #f4f7f8;
-            color: #222;
-        }
-
-        .header {
-            background: white;
-            padding: 25px 40px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .header h1 {
-            margin: 0;
-            color: #0f3d3e;
-        }
-
-        .container {
-            padding: 40px;
-        }
-
-        .volver {
-            display: inline-block;
-            margin-bottom: 20px;
-            text-decoration: none;
-            color: white;
-            background: #0f3d3e;
-            padding: 10px 18px;
-            border-radius: 6px;
-        }
-
-        .form-container,
-        .table-container {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            margin-bottom: 30px;
-        }
-
-        .form-container h2 {
-            color: #0f3d3e;
-            margin-top: 0;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .form-group label {
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
-
-        .form-group input,
-        .form-group select {
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 15px;
-        }
-
-        .btn-guardar {
-            margin-top: 20px;
-            padding: 12px 25px;
-            background: #0f3d3e;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        .btn-guardar:hover {
-            background: #145556;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th {
-            background: #0f3d3e;
-            color: white;
-            padding: 14px;
-            text-align: left;
-        }
-
-        td {
-            padding: 14px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        tr:hover {
-            background: #f1f5f5;
-        }
-
-        @media (max-width: 800px) {
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
+<head th:replace="~{fragments/layout :: head('Gestión de Citas - SIGEVET')}"></head>
 
 <body>
 
-    <div class="header">
-        <h1>Gestión de Citas</h1>
-    </div>
+<div class="app-layout">
 
-    <div class="container">
+    <!-- ================= BARRA LATERAL (PERSISTENTE) ================= -->
+    <aside th:replace="~{fragments/layout :: sidebar('citas')}"></aside>
 
-        <a href="/" class="volver">
-            ← Volver al Dashboard
-        </a>
+    <!-- ================= CONTENIDO PRINCIPAL ================= -->
+    <div class="main-wrapper">
 
-        <!-- NUEVA CITA -->
-        <div class="form-container" th:if="${puedeAgendar}">
+        <!-- BARRA SUPERIOR -->
+        <header th:replace="~{fragments/layout :: topbar('Buscar citas, paciente o veterinario...')}"></header>
 
-    <h2>Registrar Nueva Cita</h2>
+        <!-- CUERPO DE LA PÁGINA -->
+        <main class="content-body">
 
-            <form action="/citas/guardar"
-                  method="post"
-                  th:object="${nuevaCita}">
-
-                <div class="form-grid">
-
-                    <div class="form-group">
-                        <label for="fecha">Fecha</label>
-
-                        <input type="date"
-                               id="fecha"
-                               th:field="*{fecha}"
-                               required>
-                    </div>
-
-
-                    <div class="form-group">
-                        <label for="hora">Hora</label>
-
-                        <input type="time"
-                               id="hora"
-                               th:field="*{hora}"
-                               required>
-                    </div>
-
-
-                    <div class="form-group">
-                        <label for="mascota">Mascota</label>
-
-                        <select id="mascota"
-                                th:field="*{mascota.id}"
-                                required>
-
-                            <option value="">
-                                Seleccione una mascota
-                            </option>
-
-                            <option th:each="mascota : ${mascotas}"
-                                    th:value="${mascota.id}"
-                                    th:text="${mascota.nombre}">
-                            </option>
-
-                        </select>
-                    </div>
-
-
-                    <div class="form-group">
-                        <label for="veterinario">Veterinario</label>
-
-                        <select id="veterinario"
-                                th:field="*{veterinario.id}"
-                                required>
-
-                            <option value="">
-                                Seleccione un veterinario
-                            </option>
-
-                            <option th:each="veterinario : ${veterinarios}"
-                                    th:value="${veterinario.id}"
-                                    th:text="${veterinario.nombre + ' ' + veterinario.apellido}">
-                            </option>
-
-                        </select>
-                    </div>
-
-
-                    <div class="form-group">
-                        <label for="motivo">Motivo</label>
-
-                        <input type="text"
-                               id="motivo"
-                               th:field="*{motivo}"
-                               placeholder="Ej. Consulta general"
-                               required>
-                    </div>
-
-
-                    <div class="form-group">
-                        <label for="estado">Estado</label>
-
-                        <select id="estado"
-                                th:field="*{estado}"
-                                required>
-
-                            <option value="PENDIENTE">
-                                PENDIENTE
-                            </option>
-
-                            <option value="ATENDIDA">
-                                ATENDIDA
-                            </option>
-
-                        </select>
-                    </div>
-
+            <!-- TÍTULO Y ACCIONES -->
+            <div class="page-header-row">
+                <div class="page-title-group">
+                    <h1>
+                        Gestión de Citas
+                        <span class="badge-live">En vivo</span>
+                    </h1>
+                    <p>Agenda diaria, programación médica y control de turnos en tiempo real.</p>
                 </div>
 
-                <button type="submit" class="btn-guardar">
-                    Guardar Cita
-                </button>
+                <div class="header-actions">
+                    <button class="btn-secondary" onclick="recargarCitas()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6"></path>
+                            <path d="M1 20v-6h6"></path>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        Refrescar
+                    </button>
 
-            </form>
+                    <button class="btn-primary" onclick="abrirModalCrear()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Nueva Cita
+                    </button>
+                </div>
+            </div>
 
-        </div>
+            <!-- TARJETAS MÉTRICAS -->
+            <section class="metrics-grid">
+                <div class="metric-card">
+                    <div>
+                        <div class="metric-label">TOTAL CITAS</div>
+                        <div class="metric-value" id="kpiTotalCitas">0</div>
+                        <div class="metric-subtext">Histórico general</div>
+                    </div>
+                    <div class="metric-icon-wrap icon-blue">📅</div>
+                </div>
 
+                <div class="metric-card">
+                    <div>
+                        <div class="metric-label">PROGRAMADAS / PENDIENTES</div>
+                        <div class="metric-value" id="kpiPendientes">0</div>
+                        <div class="metric-subtext">Próximos turnos</div>
+                    </div>
+                    <div class="metric-icon-wrap icon-amber">⏳</div>
+                </div>
 
-        <!-- LISTA DE CITAS -->
-        <div class="table-container">
+                <div class="metric-card">
+                    <div>
+                        <div class="metric-label">ATENDIDAS</div>
+                        <div class="metric-value" id="kpiAtendidas">0</div>
+                        <div class="metric-subtext">Consultas concluidas</div>
+                    </div>
+                    <div class="metric-icon-wrap icon-green">🩺</div>
+                </div>
 
-            <h2>Citas Registradas</h2>
+                <div class="metric-card">
+                    <div>
+                        <div class="metric-label">CANCELADAS</div>
+                        <div class="metric-value" id="kpiCanceladas">0</div>
+                        <div class="metric-subtext">Turnos anulados</div>
+                    </div>
+                    <div class="metric-icon-wrap icon-gray">❌</div>
+                </div>
+            </section>
 
-            <table>
+            <!-- FILTRO DE ESTADO Y BUSCADOR -->
+            <div class="filter-tabs-row">
+                <div class="filter-pills">
+                    <button class="btn-filter-pill active" onclick="filtrarPorEstado('TODOS', this)">Todas las citas</button>
+                    <button class="btn-filter-pill" onclick="filtrarPorEstado('PROGRAMADA', this)">Programadas</button>
+                    <button class="btn-filter-pill" onclick="filtrarPorEstado('PENDIENTE', this)">Pendientes</button>
+                    <button class="btn-filter-pill" onclick="filtrarPorEstado('ATENDIDA', this)">Atendidas</button>
+                    <button class="btn-filter-pill" onclick="filtrarPorEstado('CANCELADA', this)">Canceladas</button>
+                </div>
 
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Fecha</th>
-                        <th>Hora</th>
-                        <th>Motivo</th>
-                        <th>Estado</th>
-                        <th>Mascota</th>
-                        <th>Veterinario</th>
-                    </tr>
-                </thead>
+                <div class="filter-search-input">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="filtroTexto" placeholder="Buscar por paciente, motivo o veterinario..." oninput="filtrarPorTexto(this.value)">
+                </div>
+            </div>
 
-                <tbody>
+            <!-- CONTENEDOR DE TARJETAS DE CITA (ESTILO MOCKUP) -->
+            <div class="citas-cards-container" id="citasContainer">
+                <div style="background:white; padding:40px; text-align:center; border-radius:12px; color:#94a3b8;">
+                    Cargando citas médicas desde el servidor...
+                </div>
+            </div>
 
-                    <tr th:each="cita : ${citas}">
-
-                        <td th:text="${cita.id}"></td>
-
-                        <td th:text="${cita.fecha}"></td>
-
-                        <td th:text="${cita.hora}"></td>
-
-                        <td th:text="${cita.motivo}"></td>
-
-                        <td th:text="${cita.estado}"></td>
-
-                        <td th:text="${cita.mascota != null ? cita.mascota.nombre : 'Sin mascota'}"></td>
-
-                        <td th:text="${cita.veterinario != null ? cita.veterinario.nombre + ' ' + cita.veterinario.apellido : 'Sin veterinario'}"></td>
-
-                    </tr>
-
-                </tbody>
-
-            </table>
-
-        </div>
+        </main>
 
     </div>
 
-</body>
+</div>
 
+<!-- MODAL REGISTRAR / EDITAR CITA -->
+<div class="modal-overlay" id="modalCita">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3 id="modalTitulo"><span>📅</span> Programar Nueva Cita</h3>
+            <button class="btn-close-modal" onclick="cerrarModalCita()" style="background:none; border:none; font-size:22px; cursor:pointer; color:#94a3b8;">&times;</button>
+        </div>
+
+        <form id="formCita" onsubmit="guardarCita(event)">
+            <input type="hidden" id="citaId">
+
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="inputFecha">Fecha de la Cita *</label>
+                        <input type="date" id="inputFecha" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputHora">Hora de la Cita *</label>
+                        <input type="time" id="inputHora" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="inputMascotaId">Paciente (Mascota) *</label>
+                    <select id="inputMascotaId" required>
+                        <option value="" disabled selected>Seleccione la mascota paciente...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="inputVeterinarioId">Veterinario Asignado *</label>
+                    <select id="inputVeterinarioId" required>
+                        <option value="" disabled selected>Seleccione el veterinario...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="inputMotivo">Motivo de la Consulta *</label>
+                    <input type="text" id="inputMotivo" placeholder="Ej: Control general, Vacunación Séxtuple, etc." required maxlength="255">
+                </div>
+
+                <div class="form-group">
+                    <label for="inputEstado">Estado de la Cita</label>
+                    <select id="inputEstado">
+                        <option value="PROGRAMADA">PROGRAMADA</option>
+                        <option value="PENDIENTE">PENDIENTE</option>
+                        <option value="ATENDIDA">ATENDIDA</option>
+                        <option value="CANCELADA">CANCELADA</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="cerrarModalCita()">Cancelar</button>
+                <button type="submit" class="btn-primary" id="btnGuardar">Guardar Cita</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: toastContainer}"></div>
+
+<!-- ================= JAVASCRIPT DINÁMICO (PATRÓN MVC REST) ================= -->
+<script>
+    let citasGlobal = [];
+    let estadoFiltroActivo = 'TODOS';
+    let mascotasLista = [];
+    let veterinariosLista = [];
+
+    document.addEventListener("DOMContentLoaded", () => {
+        cargarCitas();
+        cargarEstadisticas();
+        cargarComboMascotas();
+        cargarComboVeterinarios();
+
+        // Poner fecha de hoy por defecto al crear
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('inputFecha').value = hoy;
+    });
+
+    async function cargarCitas() {
+        try {
+            const resp = await fetch('/api/citas');
+            if (resp.status === 401) {
+                window.location.href = '/login?auth=required';
+                return;
+            }
+            citasGlobal = await resp.json();
+            aplicarFiltros();
+        } catch (error) {
+            console.error("Error al cargar citas:", error);
+            mostrarToast("Error al cargar las citas", "error");
+        }
+    }
+
+    async function cargarEstadisticas() {
+        try {
+            const resp = await fetch('/api/citas/estadisticas');
+            if (resp.ok) {
+                const stats = await resp.json();
+                document.getElementById('kpiTotalCitas').textContent = stats.totalCitas || 0;
+                document.getElementById('kpiPendientes').textContent = stats.pendientes || 0;
+                document.getElementById('kpiAtendidas').textContent = stats.atendidas || 0;
+                document.getElementById('kpiCanceladas').textContent = stats.canceladas || 0;
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function cargarComboMascotas() {
+        try {
+            const resp = await fetch('/api/mascotas');
+            if (resp.ok) {
+                mascotasLista = await resp.json();
+                const sel = document.getElementById('inputMascotaId');
+                sel.innerHTML = '<option value="" disabled selected>Seleccione la mascota paciente...</option>';
+                mascotasLista.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = `${m.nombre} (${m.especie || 'Mascota'} - Dueño: ${m.clienteNombre})`;
+                    sel.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function cargarComboVeterinarios() {
+        try {
+            const resp = await fetch('/api/citas/veterinarios');
+            if (resp.ok) {
+                veterinariosLista = await resp.json();
+                const sel = document.getElementById('inputVeterinarioId');
+                sel.innerHTML = '<option value="" disabled selected>Seleccione el veterinario...</option>';
+                veterinariosLista.forEach(v => {
+                    const opt = document.createElement('option');
+                    opt.value = v.id;
+                    opt.textContent = `Dr. ${v.nombre}`;
+                    sel.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function renderizarCitas(lista) {
+        const container = document.getElementById('citasContainer');
+        container.innerHTML = '';
+
+        if (lista.length === 0) {
+            container.innerHTML = `
+                <div style="background:white; padding:40px; text-align:center; border-radius:12px; color:#94a3b8;">
+                    No se encontraron citas con los filtros seleccionados.
+                </div>
+            `;
+            return;
+        }
+
+        lista.forEach(c => {
+            const card = document.createElement('div');
+            const estado = (c.estado || 'PROGRAMADA').toUpperCase();
+            let statusClass = 'status-programada';
+            let pillClass = 'pill-programada';
+
+            if (estado === 'ATENDIDA') {
+                statusClass = 'status-atendida';
+                pillClass = 'pill-atendida';
+            } else if (estado === 'PENDIENTE') {
+                statusClass = 'status-pendiente';
+                pillClass = 'pill-pendiente';
+            } else if (estado === 'CANCELADA') {
+                statusClass = 'status-cancelada';
+                pillClass = 'pill-cancelada';
+            }
+
+            card.className = `cita-card ${statusClass}`;
+
+            const espLower = (c.mascotaEspecie || '').toLowerCase();
+            let petIcon = '🐾';
+            if (espLower.includes('perro') || espLower.includes('canino')) petIcon = '🐶';
+            else if (espLower.includes('gato') || espLower.includes('felino')) petIcon = '🐱';
+
+            const puedeAtender = estado !== 'ATENDIDA' && estado !== 'CANCELADA';
+
+            card.innerHTML = `
+                <div class="time-box">
+                    <div class="time-badge">HORA</div>
+                    <div class="time-hour">${c.horaFormateada || '--:--'}</div>
+                    <div class="time-date">${c.fecha || ''}</div>
+                </div>
+
+                <div class="patient-info">
+                    <div class="patient-avatar">${petIcon}</div>
+                    <div class="patient-details">
+                        <div class="patient-name-row">
+                            <span class="patient-name">${c.mascotaNombre}</span>
+                            <span class="patient-species-pill">• ${c.mascotaEspecie || ''} ${c.mascotaRaza ? '(' + c.mascotaRaza + ')' : ''}</span>
+                        </div>
+                        <div class="motivo-text">
+                            <strong>Motivo:</strong> ${c.motivo || 'Consulta General'}
+                        </div>
+                        <div class="meta-tags">
+                            <span class="meta-tag">👤 Propietario: <strong>${c.clienteNombre}</strong></span>
+                            ${c.clienteTelefono ? `<span class="meta-tag">📞 ${c.clienteTelefono}</span>` : ''}
+                            <span class="meta-tag">🩺 ${c.veterinarioNombre}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="status-actions-group">
+                    <span class="badge-status-pill ${pillClass}">
+                        ● ${estado}
+                    </span>
+
+                    ${puedeAtender ? `
+                        <button class="btn-atender-quick" onclick="marcarAtendida(${c.id})">
+                            ✓ Pasar a Atendida
+                        </button>
+                    ` : ''}
+
+                    <button class="btn-icon-action" title="Editar cita" onclick="abrirModalEditar(${c.id})">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+
+                    <button class="btn-icon-action delete" title="Cancelar / Eliminar" onclick="eliminarCita(${c.id})">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
+                </div>
+            `;
+
+            container.appendChild(card);
+        });
+    }
+
+    function filtrarPorEstado(estado, btn) {
+        estadoFiltroActivo = estado;
+        document.querySelectorAll('.btn-filter-pill').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        aplicarFiltros();
+    }
+
+    function filtrarPorTexto() {
+        aplicarFiltros();
+    }
+
+    function filtrarGlobal(query) {
+        document.getElementById('filtroTexto').value = query;
+        aplicarFiltros();
+    }
+
+    function aplicarFiltros() {
+        const q = (document.getElementById('filtroTexto').value || '').toLowerCase().trim();
+
+        let filtradas = citasGlobal;
+        if (estadoFiltroActivo !== 'TODOS') {
+            filtradas = filtradas.filter(c => (c.estado || '').toUpperCase() === estadoFiltroActivo);
+        }
+
+        if (q) {
+            filtradas = filtradas.filter(c =>
+                (c.mascotaNombre && c.mascotaNombre.toLowerCase().includes(q)) ||
+                (c.motivo && c.motivo.toLowerCase().includes(q)) ||
+                (c.clienteNombre && c.clienteNombre.toLowerCase().includes(q)) ||
+                (c.veterinarioNombre && c.veterinarioNombre.toLowerCase().includes(q))
+            );
+        }
+
+        renderizarCitas(filtradas);
+    }
+
+    function recargarCitas() {
+        document.getElementById('filtroTexto').value = '';
+        document.getElementById('globalSearch').value = '';
+        cargarCitas();
+        cargarEstadisticas();
+        mostrarToast("Agenda actualizada", "success");
+    }
+
+    function abrirModalCrear() {
+        document.getElementById('formCita').reset();
+        document.getElementById('citaId').value = '';
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('inputFecha').value = hoy;
+        document.getElementById('inputEstado').value = 'PROGRAMADA';
+        document.getElementById('modalTitulo').innerHTML = '<span>➕</span> Programar Nueva Cita';
+        document.getElementById('btnGuardar').textContent = 'Guardar Cita';
+        document.getElementById('modalCita').classList.add('active');
+    }
+
+    async function abrirModalEditar(id) {
+        try {
+            const resp = await fetch(`/api/citas/${id}`);
+            if (!resp.ok) throw new Error("No se pudo obtener la cita");
+            const c = await resp.json();
+
+            document.getElementById('citaId').value = c.id;
+            document.getElementById('inputFecha').value = c.fecha || '';
+            document.getElementById('inputHora').value = c.horaFormateada || '';
+            document.getElementById('inputMascotaId').value = c.mascotaId || '';
+            document.getElementById('inputVeterinarioId').value = c.veterinarioId || '';
+            document.getElementById('inputMotivo').value = c.motivo || '';
+            document.getElementById('inputEstado').value = (c.estado || 'PROGRAMADA').toUpperCase();
+
+            document.getElementById('modalTitulo').innerHTML = '<span>✏️</span> Editar Cita';
+            document.getElementById('btnGuardar').textContent = 'Actualizar Cambios';
+            document.getElementById('modalCita').classList.add('active');
+        } catch (e) {
+            mostrarToast("Error al cargar la cita", "error");
+        }
+    }
+
+    function cerrarModalCita() {
+        document.getElementById('modalCita').classList.remove('active');
+    }
+
+    async function guardarCita(e) {
+        e.preventDefault();
+
+        const id = document.getElementById('citaId').value;
+        const payload = {
+            fecha: document.getElementById('inputFecha').value,
+            hora: document.getElementById('inputHora').value,
+            mascotaId: document.getElementById('inputMascotaId').value,
+            veterinarioId: document.getElementById('inputVeterinarioId').value,
+            motivo: document.getElementById('inputMotivo').value.trim(),
+            estado: document.getElementById('inputEstado').value
+        };
+
+        const esEdicion = !!id;
+        const url = esEdicion ? `/api/citas/${id}` : '/api/citas';
+        const method = esEdicion ? 'PUT' : 'POST';
+
+        try {
+            const resp = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await resp.json();
+            if (!resp.ok) {
+                mostrarToast(data.error || "Ocurrió un error al guardar", "error");
+                return;
+            }
+
+            cerrarModalCita();
+            mostrarToast(esEdicion ? "Cita actualizada con éxito" : "Cita programada con éxito", "success");
+            cargarCitas();
+            cargarEstadisticas();
+        } catch (error) {
+            mostrarToast("Error de conexión con el servidor", "error");
+        }
+    }
+
+    async function marcarAtendida(id) {
+        try {
+            const resp = await fetch(`/api/citas/${id}/estado`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ estado: 'ATENDIDA' })
+            });
+
+            if (resp.ok) {
+                mostrarToast("Cita marcada como ATENDIDA", "success");
+                cargarCitas();
+                cargarEstadisticas();
+            }
+        } catch (e) {
+            mostrarToast("Error al actualizar estado", "error");
+        }
+    }
+
+    async function eliminarCita(id) {
+        if (!confirm("¿Desea cancelar y eliminar esta cita de la agenda?")) return;
+
+        try {
+            const resp = await fetch(`/api/citas/${id}`, { method: 'DELETE' });
+            if (resp.ok) {
+                mostrarToast("Cita cancelada con éxito", "success");
+                cargarCitas();
+                cargarEstadisticas();
+            }
+        } catch (e) {
+            mostrarToast("Error de conexión", "error");
+        }
+    }
+
+    function mostrarToast(mensaje, tipo = "info") {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast ${tipo}`;
+        toast.innerHTML = `<span>${mensaje}</span><span style="cursor:pointer; margin-left:12px;" onclick="this.parentElement.remove()">&times;</span>`;
+        container.appendChild(toast);
+        setTimeout(() => { if (toast.parentElement) toast.remove(); }, 3500);
+    }
+</script>
+
+</body>
 </html>

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/layout :: head('Gestión de Mascotas - SIGEVET')}"></head>
+
+<body>
+
+<div class="app-layout">
+
+    <!-- ================= BARRA LATERAL (PERSISTENTE) ================= -->
+    <aside th:replace="~{fragments/layout :: sidebar('mascotas')}"></aside>
+
+    <!-- ================= CONTENIDO PRINCIPAL ================= -->
+    <div class="main-wrapper">
+
+        <!-- BARRA SUPERIOR -->
+        <header th:replace="~{fragments/layout :: topbar('Buscar pacientes por nombre, raza o dueño...')}"></header>
+
+        <!-- CUERPO DE LA PÁGINA -->
+        <main class="content-body">
+
+            <!-- TÍTULO Y ACCIONES -->
+            <div class="page-header-row">
+                <div class="page-title-group">
+                    <h1>
+                        Gestión de Mascotas
+                        <span class="badge-live">Censo Activo</span>
+                    </h1>
+                    <p>Fichas clínicas de pacientes caninos, felinos y especies registradas.</p>
+                </div>
+
+                <div class="header-actions">
+                    <button class="btn-secondary" onclick="recargarMascotas()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6"></path>
+                            <path d="M1 20v-6h6"></path>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        Refrescar
+                    </button>
+
+                    <button class="btn-primary" onclick="abrirModalCrear()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Nueva Mascota
+                    </button>
+                </div>
+            </div>
+
+            <!-- TARJETAS MÉTRICAS -->
+            <section class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">TOTAL PACIENTES</span>
+                        <span class="metric-value" id="kpiTotalMascotas">0</span>
+                        <span class="metric-subtext">Censo general</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-blue">🐾</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">CANINOS (PERROS)</span>
+                        <span class="metric-value" id="kpiCaninos">0</span>
+                        <span class="metric-subtext">Especie predominante</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-green">🐶</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">FELINOS (GATOS)</span>
+                        <span class="metric-value" id="kpiFelinos">0</span>
+                        <span class="metric-subtext">Pacientes felinos</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-purple">🐱</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">OTRAS ESPECIES</span>
+                        <span class="metric-value" id="kpiOtros">0</span>
+                        <span class="metric-subtext">Aves, conejos, exóticos</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-orange">🐰</div>
+                </div>
+            </section>
+
+            <!-- TABLA DE MASCOTAS -->
+            <div class="data-card">
+                <div class="data-header">
+                    <div class="filter-input-wrap">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="filtroTabla" placeholder="Buscar por nombre, raza, especie o dueño..." oninput="filtrarTabla(this.value)">
+                    </div>
+
+                    <div style="font-size:13px; color:#64748b; font-weight:600;" id="statsContador">
+                        Cargando mascotas...
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>PACIENTE</th>
+                                <th>ESPECIE</th>
+                                <th>RAZA</th>
+                                <th>GÉNERO</th>
+                                <th>FECHA NACIMIENTO</th>
+                                <th>PESO (KG)</th>
+                                <th>PROPIETARIO</th>
+                                <th style="text-align: right;">ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaMascotasBody">
+                            <tr>
+                                <td colspan="8" style="text-align:center; padding: 40px; color:#64748b;">
+                                    Cargando mascotas desde el servidor...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+
+    </div>
+
+</div>
+
+<!-- MODAL REGISTRAR / EDITAR MASCOTA -->
+<div class="modal-overlay" id="modalMascota">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3 id="modalTitulo"><span>🐾</span> Registrar Nueva Mascota</h3>
+            <button class="btn-close-modal" onclick="cerrarModalMascota()" style="background:none; border:none; font-size:22px; cursor:pointer; color:#94a3b8;">&times;</button>
+        </div>
+
+        <form id="formMascota" onsubmit="guardarMascota(event)">
+            <input type="hidden" id="mascotaId">
+
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="inputNombre">Nombre de la Mascota *</label>
+                        <input type="text" id="inputNombre" placeholder="Ej: Max" required maxlength="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputEspecie">Especie *</label>
+                        <select id="inputEspecie" required>
+                            <option value="Perro">Perro (Canino)</option>
+                            <option value="Gato">Gato (Felino)</option>
+                            <option value="Conejo">Conejo</option>
+                            <option value="Ave">Ave</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="inputRaza">Raza</label>
+                        <input type="text" id="inputRaza" placeholder="Ej: Labrador Retriever" maxlength="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputGenero">Género</label>
+                        <select id="inputGenero">
+                            <option value="Macho">Macho</option>
+                            <option value="Hembra">Hembra</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="inputFechaNacimiento">Fecha de Nacimiento</label>
+                        <input type="date" id="inputFechaNacimiento">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputPeso">Peso actual (kg)</label>
+                        <input type="number" step="0.01" min="0" id="inputPeso" placeholder="Ej: 14.50">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="inputClienteId">Propietario Asignado *</label>
+                    <select id="inputClienteId" required>
+                        <option value="" disabled selected>Seleccione el cliente propietario...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="cerrarModalMascota()">Cancelar</button>
+                <button type="submit" class="btn-primary" id="btnGuardar">Guardar Mascota</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: toastContainer}"></div>
+
+<!-- ================= JAVASCRIPT DINÁMICO (PATRÓN MVC REST) ================= -->
+<script>
+    let mascotasGlobal = [];
+    let clientesLista = [];
+
+    document.addEventListener("DOMContentLoaded", () => {
+        cargarMascotas();
+        cargarEstadisticas();
+        cargarComboClientes();
+    });
+
+    async function cargarMascotas(filtro = "") {
+        try {
+            const url = filtro ? `/api/mascotas?buscar=${encodeURIComponent(filtro)}` : '/api/mascotas';
+            const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+
+            if (response.status === 401) {
+                window.location.href = '/login?auth=required';
+                return;
+            }
+
+            mascotasGlobal = await response.json();
+            renderizarTabla(mascotasGlobal);
+        } catch (error) {
+            console.error("Error al cargar mascotas:", error);
+            mostrarToast("Error al cargar lista de mascotas", "error");
+        }
+    }
+
+    async function cargarEstadisticas() {
+        try {
+            const resp = await fetch('/api/mascotas/estadisticas');
+            if (resp.ok) {
+                const stats = await resp.json();
+                document.getElementById('kpiTotalMascotas').textContent = stats.totalMascotas || 0;
+                document.getElementById('kpiCaninos').textContent = stats.caninos || 0;
+                document.getElementById('kpiFelinos').textContent = stats.felinos || 0;
+                document.getElementById('kpiOtros').textContent = stats.otros || 0;
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function cargarComboClientes() {
+        try {
+            const resp = await fetch('/api/clientes');
+            if (resp.ok) {
+                clientesLista = await resp.json();
+                const select = document.getElementById('inputClienteId');
+                select.innerHTML = '<option value="" disabled selected>Seleccione el cliente propietario...</option>';
+                clientesLista.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = `${c.nombre} ${c.apellido} (DNI: ${c.dni || 'S/D'})`;
+                    select.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function renderizarTabla(lista) {
+        const tbody = document.getElementById('tablaMascotasBody');
+        const stats = document.getElementById('statsContador');
+        tbody.innerHTML = '';
+
+        stats.textContent = `Mostrando ${lista.length} de ${mascotasGlobal.length} pacientes`;
+
+        if (lista.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align:center; padding: 40px; color:#94a3b8;">
+                        No se encontraron mascotas registradas con esos criterios.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        lista.forEach(m => {
+            const tr = document.createElement('tr');
+            const espLower = (m.especie || '').toLowerCase();
+            let icono = '🐾';
+            let badgeClass = 'species-otro';
+
+            if (espLower.includes('perro') || espLower.includes('canino')) {
+                icono = '🐶';
+                badgeClass = 'species-perro';
+            } else if (espLower.includes('gato') || espLower.includes('felino')) {
+                icono = '🐱';
+                badgeClass = 'species-gato';
+            }
+
+            const isMacho = (m.genero || '').toLowerCase() === 'macho';
+            const genderBadge = isMacho
+                ? '<span class="badge-gender gender-macho">♂ Macho</span>'
+                : '<span class="badge-gender gender-hembra">♀ Hembra</span>';
+
+            tr.innerHTML = `
+                <td>
+                    <div class="pet-cell">
+                        <div class="pet-avatar">${icono}</div>
+                        <div>
+                            <strong style="color:#0f172a; font-size:15px;">${m.nombre}</strong>
+                            <div style="color:#94a3b8; font-size:12px;">ID: #${m.id}</div>
+                        </div>
+                    </div>
+                </td>
+                <td><span class="badge-species ${badgeClass}">${m.especie || 'N/D'}</span></td>
+                <td>${m.raza || '<span style="color:#94a3b8">Mestizo</span>'}</td>
+                <td>${genderBadge}</td>
+                <td>${m.fechaNacimiento || '<span style="color:#94a3b8">N/D</span>'}</td>
+                <td><strong>${m.peso ? m.peso + ' kg' : '<span style="color:#94a3b8">--</span>'}</strong></td>
+                <td>
+                    <span class="owner-badge">👤 ${m.clienteNombre}</span>
+                </td>
+                <td style="text-align: right;">
+                    <div style="display:flex; justify-content:flex-end; gap:8px;">
+                        <button class="btn-table-action" title="Editar" onclick="abrirModalEditar(${m.id})">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        <button class="btn-table-action delete" title="Eliminar" onclick="confirmarEliminar(${m.id}, '${m.nombre}', ${m.totalCitas})">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function filtrarTabla(query) {
+        const q = (query || '').toLowerCase().trim();
+        if (!q) {
+            renderizarTabla(mascotasGlobal);
+            return;
+        }
+
+        const filtrados = mascotasGlobal.filter(m =>
+            (m.nombre && m.nombre.toLowerCase().includes(q)) ||
+            (m.especie && m.especie.toLowerCase().includes(q)) ||
+            (m.raza && m.raza.toLowerCase().includes(q)) ||
+            (m.clienteNombre && m.clienteNombre.toLowerCase().includes(q))
+        );
+        renderizarTabla(filtrados);
+    }
+
+    function filtrarGlobal(query) {
+        document.getElementById('filtroTabla').value = query;
+        filtrarTabla(query);
+    }
+
+    function recargarMascotas() {
+        document.getElementById('filtroTabla').value = '';
+        document.getElementById('globalSearch').value = '';
+        cargarMascotas();
+        cargarEstadisticas();
+        mostrarToast("Lista de mascotas actualizada", "success");
+    }
+
+    function abrirModalCrear() {
+        document.getElementById('formMascota').reset();
+        document.getElementById('mascotaId').value = '';
+        document.getElementById('modalTitulo').innerHTML = '<span>➕</span> Registrar Nueva Mascota';
+        document.getElementById('btnGuardar').textContent = 'Guardar Mascota';
+        document.getElementById('modalMascota').classList.add('active');
+        document.getElementById('inputNombre').focus();
+    }
+
+    async function abrirModalEditar(id) {
+        try {
+            const resp = await fetch(`/api/mascotas/${id}`);
+            if (!resp.ok) throw new Error("No se pudo obtener la mascota");
+            const m = await resp.json();
+
+            document.getElementById('mascotaId').value = m.id;
+            document.getElementById('inputNombre').value = m.nombre || '';
+            document.getElementById('inputEspecie').value = m.especie || 'Perro';
+            document.getElementById('inputRaza').value = m.raza || '';
+            document.getElementById('inputGenero').value = m.genero || 'Macho';
+            document.getElementById('inputFechaNacimiento').value = m.fechaNacimiento || '';
+            document.getElementById('inputPeso').value = m.peso || '';
+            document.getElementById('inputClienteId').value = m.clienteId || '';
+
+            document.getElementById('modalTitulo').innerHTML = '<span>✏️</span> Editar Mascota';
+            document.getElementById('btnGuardar').textContent = 'Actualizar Cambios';
+            document.getElementById('modalMascota').classList.add('active');
+        } catch (e) {
+            mostrarToast("Error al cargar datos de la mascota", "error");
+        }
+    }
+
+    function cerrarModalMascota() {
+        document.getElementById('modalMascota').classList.remove('active');
+    }
+
+    async function guardarMascota(e) {
+        e.preventDefault();
+
+        const id = document.getElementById('mascotaId').value;
+        const payload = {
+            nombre: document.getElementById('inputNombre').value.trim(),
+            especie: document.getElementById('inputEspecie').value,
+            raza: document.getElementById('inputRaza').value.trim(),
+            genero: document.getElementById('inputGenero').value,
+            fechaNacimiento: document.getElementById('inputFechaNacimiento').value || null,
+            peso: document.getElementById('inputPeso').value || null,
+            clienteId: document.getElementById('inputClienteId').value
+        };
+
+        const esEdicion = !!id;
+        const url = esEdicion ? `/api/mascotas/${id}` : '/api/mascotas';
+        const method = esEdicion ? 'PUT' : 'POST';
+
+        try {
+            const resp = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await resp.json();
+            if (!resp.ok) {
+                mostrarToast(data.error || "Ocurrió un error al guardar", "error");
+                return;
+            }
+
+            cerrarModalMascota();
+            mostrarToast(esEdicion ? "Mascota actualizada con éxito" : "Mascota registrada con éxito", "success");
+            cargarMascotas();
+            cargarEstadisticas();
+        } catch (error) {
+            console.error(error);
+            mostrarToast("Error de conexión con el servidor", "error");
+        }
+    }
+
+    async function confirmarEliminar(id, nombre, totalCitas) {
+        if (totalCitas > 0) {
+            alert(`No se puede eliminar a "${nombre}" porque tiene ${totalCitas} cita(s) o atenciones registradas en su historial.`);
+            return;
+        }
+
+        const conf = confirm(`¿Está seguro de eliminar a la mascota "${nombre}"?`);
+        if (!conf) return;
+
+        try {
+            const resp = await fetch(`/api/mascotas/${id}`, { method: 'DELETE' });
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                mostrarToast(data.error || "Error al eliminar", "error");
+                return;
+            }
+
+            mostrarToast("Mascota eliminada correctamente", "success");
+            cargarMascotas();
+            cargarEstadisticas();
+        } catch (e) {
+            mostrarToast("Error de conexión", "error");
+        }
+    }
+
+    function mostrarToast(mensaje, tipo = "info") {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast ${tipo}`;
+        toast.innerHTML = `<span>${mensaje}</span><span style="cursor:pointer; margin-left:12px;" onclick="this.parentElement.remove()">&times;</span>`;
+        container.appendChild(toast);
+        setTimeout(() => { if (toast.parentElement) toast.remove(); }, 3500);
+    }
+</script>
+
+</body>
+</html>

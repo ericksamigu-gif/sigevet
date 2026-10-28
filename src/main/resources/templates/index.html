@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/layout :: head('Panel Principal - SIGEVET')}"></head>
+
+<body>
+
+<div class="app-layout">
+
+    <!-- ================= BARRA LATERAL (PERSISTENTE) ================= -->
+    <aside th:replace="~{fragments/layout :: sidebar('inicio')}"></aside>
+
+    <!-- ================= CONTENIDO PRINCIPAL ================= -->
+    <div class="main-wrapper">
+
+        <!-- BARRA SUPERIOR -->
+        <header th:replace="~{fragments/layout :: topbar('Buscar pacientes, citas, propietarios, teléfono...')}"></header>
+
+        <!-- CUERPO DEL DASHBOARD -->
+        <main class="content-body">
+
+            <!-- TARJETA BIENVENIDA -->
+            <section class="welcome-card">
+                <div class="welcome-text">
+                    <h2>
+                        ¡Bienvenido a SIGEVET, 
+                        <span th:if="${usuario != null}" th:text="${usuario.nombre}">Usuario</span>!
+                    </h2>
+                    <p>Sistema de Gestión de Veterinaria.</p>
+                    <span class="role-pill" th:if="${usuario != null}" th:text="'Rol: ' + ${usuario.rol}">Rol: ACTIVO</span>
+                </div>
+            </section>
+
+            <!-- KPIS GENERALES -->
+            <section class="metrics-grid">
+                <a href="/clientes" class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">GESTIÓN CLIENTES</span>
+                        <span class="metric-value" id="dashClientes">0</span>
+                        <span class="metric-subtext">Directorio de propietarios</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-green">👥</div>
+                </a>
+
+                <a href="/mascotas" class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">MASCOTAS ACTIVAS</span>
+                        <span class="metric-value" id="dashMascotas">0</span>
+                        <span class="metric-subtext">Pacientes censados</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-blue">🐾</div>
+                </a>
+
+                <a href="/citas" class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">CITAS PROGRAMADAS</span>
+                        <span class="metric-value" id="dashCitas">0</span>
+                        <span class="metric-subtext">Turnos médicos</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-purple">📅</div>
+                </a>
+
+                <a href="/historial" class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">ATENCIONES MÉDICAS</span>
+                        <span class="metric-value" id="dashAtenciones">0</span>
+                        <span class="metric-subtext">Consultas realizadas</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-red">🩺</div>
+                </a>
+            </section>
+
+            <!-- ACCESOS RÁPIDOS A MÓDULOS -->
+            <h3 style="font-size:18px; font-weight:800; margin-bottom:16px; color:#0f172a;">Módulos del Sistema</h3>
+            <section class="quick-modules-grid">
+                <div class="module-card">
+                    <div>
+                        <h3><span>👥</span> Directorio de Clientes</h3>
+                        <p>Mantenimiento integral de propietarios, actualización de teléfonos, domicilios y consulta de mascotas a su cargo.</p>
+                    </div>
+                    <a href="/clientes" class="btn-access">Ingresar a Clientes ➜</a>
+                </div>
+
+                <div class="module-card">
+                    <div>
+                        <h3><span>🐾</span> Registro de Mascotas</h3>
+                        <p>Fichas individuales de caninos, felinos y especies con historial de raza, fecha de nacimiento, género y peso.</p>
+                    </div>
+                    <a href="/mascotas" class="btn-access">Ingresar a Mascotas ➜</a>
+                </div>
+
+                <div class="module-card">
+                    <div>
+                        <h3><span>📅</span> Agenda de Citas</h3>
+                        <p>Programación de turnos, asignación de veterinarios de guardia y control de estados en sala de espera.</p>
+                    </div>
+                    <a href="/citas" class="btn-access">Ingresar a Citas ➜</a>
+                </div>
+            </section>
+
+        </main>
+
+    </div>
+
+</div>
+
+<script>
+    // Carga dinámica de estadísticas en el panel de inicio
+    document.addEventListener("DOMContentLoaded", async () => {
+        try {
+            const resp = await fetch('/api/dashboard/estadisticas');
+            if (resp.ok) {
+                const stats = await resp.json();
+                document.getElementById('dashClientes').textContent = stats.totalClientes || 0;
+                document.getElementById('dashMascotas').textContent = stats.totalMascotas || 0;
+                document.getElementById('dashCitas').textContent = stats.citasProgramadas || 0;
+                document.getElementById('dashAtenciones').textContent = stats.totalAtenciones || 0;
+            }
+        } catch (e) {
+            console.error("Error al cargar KPIs del dashboard:", e);
+        }
+    });
+</script>
+
+</body>
+</html>

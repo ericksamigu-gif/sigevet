@@ -22,23 +22,11 @@
             <!-- TÍTULO Y ACCIONES -->
             <div class="page-header-row">
                 <div class="page-title-group">
-                    <h1>
-                        Gestión de Clientes
-                        <span class="badge-live">En vivo</span>
-                    </h1>
+                    <h1>Gestión de Clientes</h1>
                     <p>Directorio de propietarios, historial de visitas y datos de contacto en tiempo real.</p>
                 </div>
 
                 <div class="header-actions">
-                    <button class="btn-secondary" onclick="recargarClientes()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M23 4v6h-6"></path>
-                            <path d="M1 20v-6h6"></path>
-                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                        </svg>
-                        Refrescar
-                    </button>
-
                     <button class="btn-primary" onclick="abrirModalCrear()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -88,22 +76,44 @@
                 </div>
             </section>
 
-            <!-- TABLA DE CLIENTES -->
-            <div class="data-card">
-                <div class="data-header">
-                    <div class="filter-input-wrap">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <!-- TOOLBAR DE FILTROS & BÚSQUEDA UNIFICADA -->
+            <div class="filter-toolbar">
+                <div class="filter-toolbar-group">
+                    <div class="filter-search-box">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="11" cy="11" r="8"></circle>
                             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                         </svg>
-                        <input type="text" id="filtroTabla" placeholder="Buscar por DNI, nombres, teléfono o correo..." oninput="filtrarTabla(this.value)">
+                        <input type="text" id="filtroTexto" placeholder="Buscar por DNI, nombres, teléfono o correo..." onkeydown="if(event.key==='Enter') aplicarFiltros()">
                     </div>
 
-                    <div class="data-stats-text" id="statsContador">
-                        Cargando clientes...
-                    </div>
+                    <select id="filtroMascotas" class="filter-select" onchange="aplicarFiltros()">
+                        <option value="TODOS">Todos los clientes</option>
+                        <option value="CON_MASCOTAS">Con mascotas registradas</option>
+                        <option value="SIN_MASCOTAS">Sin mascotas aún</option>
+                    </select>
                 </div>
 
+                <div class="filter-actions">
+                    <button class="btn-filter-search" onclick="aplicarFiltros()">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        Buscar
+                    </button>
+                    <button class="btn-filter-reset" onclick="limpiarFiltros()">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                            <path d="M3 3v5h5"></path>
+                        </svg>
+                        Limpiar
+                    </button>
+                </div>
+            </div>
+
+            <!-- TABLA DE CLIENTES CON PAGINACIÓN -->
+            <div class="data-card">
                 <div class="table-responsive">
                     <table>
                         <thead>
@@ -125,6 +135,16 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- CONTENEDOR DE PAGINACIÓN -->
+                <div class="pagination-container" id="paginacionContainer" style="display:none;">
+                    <div class="pagination-info" id="paginacionInfo">
+                        Mostrando 0 de 0 clientes
+                    </div>
+                    <div class="pagination-nav" id="paginacionNav">
+                        <!-- Botones de página dinámicos -->
+                    </div>
                 </div>
             </div>
 
@@ -192,7 +212,7 @@
 
 <!-- ================= MODAL MASCOTAS DEL CLIENTE ================= -->
 <div class="modal-overlay" id="modalMascotas">
-    <div class="modal-container" style="max-width: 600px;">
+    <div class="modal-container" style="max-width: 650px;">
         <div class="modal-header">
             <h3 id="modalMascotasTitulo">
                 <span>🐾</span> Mascotas del Propietario
@@ -213,13 +233,101 @@
     </div>
 </div>
 
+<!-- ================= MODAL EXPEDIENTE CLÍNICO INTEGRAL INCRUSTADO ================= -->
+<div class="modal-overlay" id="modalExpediente">
+    <div class="modal-container" style="max-width: 850px; width: 95%;">
+        <div class="modal-header">
+            <h3><span>📋</span> Expediente Clínico de Paciente</h3>
+            <button class="btn-close-modal" onclick="cerrarModalExpediente()">&times;</button>
+        </div>
+
+        <div class="modal-body" style="max-height: 72vh; overflow-y: auto;">
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:18px 22px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; gap:16px;">
+                <div style="display:flex; align-items:center; gap:16px;">
+                    <div id="expIcono" style="width:54px; height:54px; border-radius:50%; background:#e0f2fe; display:flex; align-items:center; justify-content:center; font-size:28px;">
+                        🐾
+                    </div>
+                    <div>
+                        <h2 style="font-size:22px; font-weight:800; color:#0f172a; margin:0;" id="expNombre">--</h2>
+                        <div style="color:#64748b; font-size:13px; margin-top:2px;">
+                            <span id="expEspecieRaza">--</span> • <span id="expGenero">--</span> • <strong id="expPeso">-- kg</strong>
+                        </div>
+                        <div style="color:#0f766e; font-size:12px; font-weight:700; margin-top:2px;" id="expEdad">
+                            Edad: --
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align:right; font-size:13px; border-left:1px solid #e2e8f0; padding-left:18px;">
+                    <span style="color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; display:block;">Propietario Responsable:</span>
+                    <strong style="color:#0f172a; font-size:15px; display:block;" id="expPropietario">--</strong>
+                    <div style="color:#475569;" id="expTelefono">Tel: --</div>
+                    <div style="color:#94a3b8; font-size:12px;" id="expDni">DNI: --</div>
+                </div>
+            </div>
+
+            <!-- TABS DE NAVEGACIÓN DENTRO DEL EXPEDIENTE -->
+            <div style="display:flex; gap:8px; border-bottom:1px solid #e2e8f0; margin-bottom:18px; overflow-x:auto;">
+                <button class="btn-filter-pill active" id="tabBtnConsultas" onclick="cambiarTabExpediente('consultas', this)">🩺 Consultas Médicas (<span id="countAtenciones">0</span>)</button>
+                <button class="btn-filter-pill" id="tabBtnVacunas" onclick="cambiarTabExpediente('vacunas', this)">💉 Carnet de Vacunas (<span id="countVacunas">0</span>)</button>
+                <button class="btn-filter-pill" id="tabBtnAlergias" onclick="cambiarTabExpediente('alergias', this)">⚠️ Alergias & Alertas (<span id="countAlergias">0</span>)</button>
+                <button class="btn-filter-pill" id="tabBtnCitas" onclick="cambiarTabExpediente('citas', this)">📅 Citas Agendadas (<span id="countCitas">0</span>)</button>
+            </div>
+
+            <!-- CONTENIDO TAB 1: CONSULTAS MÉDICAS -->
+            <div id="tabContentConsultas">
+                <div id="listaAtencionesExpediente" style="display:flex; flex-direction:column; gap:12px;">
+                    Cargando consultas...
+                </div>
+            </div>
+
+            <!-- CONTENIDO TAB 2: CARNET DE VACUNAS -->
+            <div id="tabContentVacunas" style="display:none;">
+                <div id="listaVacunasExpediente" style="display:flex; flex-direction:column; gap:10px;">
+                    Cargando carnet de vacunación...
+                </div>
+            </div>
+
+            <!-- CONTENIDO TAB 3: ALERGIAS Y ADVERTENCIAS -->
+            <div id="tabContentAlergias" style="display:none;">
+                <div id="listaAlergiasExpediente" style="display:flex; flex-direction:column; gap:10px;">
+                    Cargando historial de alergias...
+                </div>
+            </div>
+
+            <!-- CONTENIDO TAB 4: CITAS AGENDADAS -->
+            <div id="tabContentCitas" style="display:none;">
+                <div id="listaCitasExpediente" style="display:flex; flex-direction:column; gap:10px;">
+                    Cargando citas...
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="cerrarModalExpediente()">Volver a Clientes</button>
+            <button type="button" class="btn-primary" onclick="imprimirExpedienteCompleto()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                Imprimir Expediente Completo
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- CONTENEDOR DE NOTIFICACIONES TOAST -->
 <div th:replace="~{fragments/layout :: toastContainer}"></div>
 
-<!-- ================= JAVASCRIPT DINÁMICO (PATRÓN MVC REST) ================= -->
+<!-- ================= JAVASCRIPT DINÁMICO ================= -->
 <script>
     // Variables de estado
     let clientesGlobal = [];
+    let clientesFiltrados = [];
+    let paginaActual = 1;
+    const ITEMS_POR_PAGINA = 8;
+    let expedienteDataActual = null;
 
     // Inicializar al cargar el DOM
     document.addEventListener("DOMContentLoaded", () => {
@@ -230,10 +338,9 @@
     /**
      * Consume la API REST GET /api/clientes
      */
-    async function cargarClientes(filtro = "") {
+    async function cargarClientes() {
         try {
-            const url = filtro ? `/api/clientes?buscar=${encodeURIComponent(filtro)}` : '/api/clientes';
-            const response = await fetch(url, {
+            const response = await fetch('/api/clientes', {
                 headers: { 'Accept': 'application/json' }
             });
 
@@ -247,7 +354,7 @@
             }
 
             clientesGlobal = await response.json();
-            renderizarTabla(clientesGlobal);
+            aplicarFiltros();
         } catch (error) {
             console.error("Error al obtener clientes:", error);
             mostrarToast("Error al cargar lista de clientes", "error");
@@ -273,31 +380,82 @@
     }
 
     /**
-     * Renderiza las filas en la tabla HTML de clientes
+     * Filtros unificados y paginación
      */
-    function renderizarTabla(lista) {
+    function aplicarFiltros() {
+        const query = (document.getElementById('filtroTexto').value || '').toLowerCase().trim();
+        const filtroMascotas = document.getElementById('filtroMascotas').value;
+
+        clientesFiltrados = clientesGlobal.filter(c => {
+            const cumpleTexto = !query ||
+                (c.nombre && c.nombre.toLowerCase().includes(query)) ||
+                (c.apellido && c.apellido.toLowerCase().includes(query)) ||
+                (c.dni && c.dni.toLowerCase().includes(query)) ||
+                (c.telefono && c.telefono.toLowerCase().includes(query)) ||
+                (c.correo && c.correo.toLowerCase().includes(query));
+
+            let cumpleMascotas = true;
+            if (filtroMascotas === 'CON_MASCOTAS') {
+                cumpleMascotas = (c.cantidadMascotas || 0) > 0;
+            } else if (filtroMascotas === 'SIN_MASCOTAS') {
+                cumpleMascotas = (c.cantidadMascotas || 0) === 0;
+            }
+
+            return cumpleTexto && cumpleMascotas;
+        });
+
+        paginaActual = 1;
+        renderizarPaginacion();
+    }
+
+    function limpiarFiltros() {
+        document.getElementById('filtroTexto').value = '';
+        document.getElementById('filtroMascotas').value = 'TODOS';
+        aplicarFiltros();
+    }
+
+    function filtrarGlobal(query) {
+        document.getElementById('filtroTexto').value = query;
+        aplicarFiltros();
+    }
+
+    /**
+     * Renderizado de la tabla con paginación
+     */
+    function renderizarPaginacion() {
         const tbody = document.getElementById('tablaClientesBody');
-        const stats = document.getElementById('statsContador');
+        const pagContainer = document.getElementById('paginacionContainer');
+        const pagInfo = document.getElementById('paginacionInfo');
+        const pagNav = document.getElementById('paginacionNav');
         tbody.innerHTML = '';
 
-        stats.textContent = `Mostrando ${lista.length} de ${clientesGlobal.length} clientes`;
+        const totalRegistros = clientesFiltrados.length;
 
-        if (lista.length === 0) {
+        if (totalRegistros === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" class="empty-state">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="8" y1="12" x2="16" y2="12"></line>
-                        </svg>
-                        <p>No se encontraron clientes registrados con los criterios indicados.</p>
+                    <td colspan="7" class="empty-state-row">
+                        <div class="empty-state-icon">👥</div>
+                        <div class="empty-state-title">No se encontraron clientes</div>
+                        <div class="empty-state-desc">Intenta ajustar los criterios de búsqueda o limpia los filtros aplicados.</div>
                     </td>
                 </tr>
             `;
+            pagContainer.style.display = 'none';
             return;
         }
 
-        lista.forEach(cliente => {
+        pagContainer.style.display = 'flex';
+        const totalPaginas = Math.ceil(totalRegistros / ITEMS_POR_PAGINA);
+        if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+
+        const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+        const fin = Math.min(inicio + ITEMS_POR_PAGINA, totalRegistros);
+        const clientesPagina = clientesFiltrados.slice(inicio, fin);
+
+        pagInfo.innerHTML = `Mostrando <strong>${inicio + 1} - ${fin}</strong> de <strong>${totalRegistros}</strong> clientes`;
+
+        clientesPagina.forEach(cliente => {
             const tr = document.createElement('tr');
             const iniciales = `${(cliente.nombre || '').charAt(0)}${(cliente.apellido || '').charAt(0)}`.toUpperCase();
             const tieneMascotas = cliente.cantidadMascotas > 0;
@@ -342,44 +500,45 @@
             `;
             tbody.appendChild(tr);
         });
-    }
 
-    /**
-     * Búsqueda en tiempo real desde input
-     */
-    function filtrarTabla(query) {
-        const q = (query || '').toLowerCase().trim();
-        if (!q) {
-            renderizarTabla(clientesGlobal);
-            return;
+        // Controles de botones de navegación
+        pagNav.innerHTML = '';
+
+        // Botón Anterior
+        const btnPrev = document.createElement('button');
+        btnPrev.className = 'page-btn';
+        btnPrev.innerHTML = '&lsaquo; Anterior';
+        btnPrev.disabled = paginaActual === 1;
+        btnPrev.onclick = () => { if (paginaActual > 1) { paginaActual--; renderizarPaginacion(); } };
+        pagNav.appendChild(btnPrev);
+
+        // Botones numéricos
+        for (let i = 1; i <= totalPaginas; i++) {
+            if (i === 1 || i === totalPaginas || (i >= paginaActual - 1 && i <= paginaActual + 1)) {
+                const btnNum = document.createElement('button');
+                btnNum.className = `page-btn ${i === paginaActual ? 'active' : ''}`;
+                btnNum.textContent = i;
+                btnNum.onclick = () => { paginaActual = i; renderizarPaginacion(); };
+                pagNav.appendChild(btnNum);
+            } else if (i === paginaActual - 2 || i === paginaActual + 2) {
+                const dots = document.createElement('span');
+                dots.style.cssText = 'padding: 0 4px; color:#94a3b8; font-weight:700;';
+                dots.textContent = '...';
+                pagNav.appendChild(dots);
+            }
         }
 
-        const filtrados = clientesGlobal.filter(c => 
-            (c.nombre && c.nombre.toLowerCase().includes(q)) ||
-            (c.apellido && c.apellido.toLowerCase().includes(q)) ||
-            (c.dni && c.dni.toLowerCase().includes(q)) ||
-            (c.telefono && c.telefono.toLowerCase().includes(q)) ||
-            (c.correo && c.correo.toLowerCase().includes(q))
-        );
-
-        renderizarTabla(filtrados);
-    }
-
-    function filtrarGlobal(query) {
-        document.getElementById('filtroTabla').value = query;
-        filtrarTabla(query);
-    }
-
-    function recargarClientes() {
-        document.getElementById('filtroTabla').value = '';
-        document.getElementById('globalSearch').value = '';
-        cargarClientes();
-        cargarEstadisticas();
-        mostrarToast("Lista actualizada correctamente", "success");
+        // Botón Siguiente
+        const btnNext = document.createElement('button');
+        btnNext.className = 'page-btn';
+        btnNext.innerHTML = 'Siguiente &rsaquo;';
+        btnNext.disabled = paginaActual === totalPaginas;
+        btnNext.onclick = () => { if (paginaActual < totalPaginas) { paginaActual++; renderizarPaginacion(); } };
+        pagNav.appendChild(btnNext);
     }
 
     /**
-     * Abrir Modal en modo CREACIÓN
+     * Modal Crear
      */
     function abrirModalCrear() {
         document.getElementById('formCliente').reset();
@@ -391,7 +550,7 @@
     }
 
     /**
-     * Abrir Modal en modo EDICIÓN
+     * Modal Editar
      */
     async function abrirModalEditar(id) {
         try {
@@ -420,7 +579,7 @@
     }
 
     /**
-     * Guardar Cliente (POST o PUT a la API REST)
+     * Guardar Cliente (POST o PUT)
      */
     async function guardarCliente(e) {
         e.preventDefault();
@@ -461,17 +620,16 @@
             cargarClientes();
             cargarEstadisticas();
         } catch (error) {
-            console.error("Error al guardar:", error);
             mostrarToast("Error de conexión con el servidor", "error");
         }
     }
 
     /**
-     * Confirmar y eliminar cliente
+     * Eliminar cliente
      */
     async function confirmarEliminar(id, nombre, totalMascotas) {
         if (totalMascotas > 0) {
-            alert(`No se puede eliminar a "${nombre}" porque tiene ${totalMascotas} mascota(s) registrada(s). Debe reasignar o eliminar las mascotas primero.`);
+            alert(`No se puede eliminar a "${nombre}" porque tiene ${totalMascotas} mascota(s) vinculada(s). Debe reasignar o eliminar las mascotas primero.`);
             return;
         }
 
@@ -505,7 +663,7 @@
     async function verMascotas(clienteId, nombreCliente) {
         document.getElementById('modalMascotasTitulo').innerHTML = `<span>🐾</span> Mascotas de ${nombreCliente}`;
         const container = document.getElementById('listaMascotasDetalle');
-        container.innerHTML = '<p style="color:#64748b; text-align:center;">Consultando expediente de mascotas...</p>';
+        container.innerHTML = '<p style="color:#64748b; text-align:center;">Consultando pacientes vinculados...</p>';
         document.getElementById('modalMascotas').classList.add('active');
 
         try {
@@ -515,9 +673,9 @@
 
             if (mascotas.length === 0) {
                 container.innerHTML = `
-                    <div style="text-align:center; padding: 20px; color:#64748b;">
+                    <div style="text-align:center; padding: 24px; color:#64748b;">
                         <p>Este cliente aún no tiene mascotas vinculadas.</p>
-                        <small>Puedes ingresar a la sección Mascotas para registrar una nueva.</small>
+                        <small>Puedes ingresar a Gestión de Mascotas para asignarle un nuevo paciente.</small>
                     </div>
                 `;
                 return;
@@ -526,19 +684,19 @@
             let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
             mascotas.forEach(m => {
                 html += `
-                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                         <div>
                             <strong style="color:#0f172a; font-size:15px;">${m.nombre}</strong>
                             <div style="color:#64748b; font-size:13px;">${m.especie || 'Especie N/D'} • ${m.raza || 'Raza N/D'}</div>
                         </div>
-                        <div style="text-align:right; font-size:13px; color:#475569; display:flex; align-items:center; gap:12px;">
+                        <div style="font-size:13px; color:#475569; display:flex; align-items:center; gap:12px;">
                             <div>
-                                <span>Género: <strong>${m.genero || 'N/D'}</strong></span><br>
+                                <span>Género: <strong>${m.genero || 'N/D'}</strong></span> | 
                                 <span>Peso: <strong>${m.peso ? m.peso + ' kg' : 'N/D'}</strong></span>
                             </div>
-                            <a href="/mascotas?expediente=${m.id}" class="btn-primary" style="font-size:12px; padding:6px 12px; text-decoration:none;" title="Ver Expediente Clínico Completo">
-                                📋 Expediente
-                            </a>
+                            <button type="button" class="btn-primary" style="font-size:12px; padding:6px 12px;" onclick="verExpedienteDesdeCliente(${m.id})">
+                                📋 Ver Expediente
+                            </button>
                         </div>
                     </div>
                 `;
@@ -552,6 +710,339 @@
 
     function cerrarModalMascotas() {
         document.getElementById('modalMascotas').classList.remove('active');
+    }
+
+    /**
+     * =========================================================================
+     * EXPEDIENTE INCRUSTADO EN CLIENTES (SIN SALIR DE PÁGINA)
+     * =========================================================================
+     */
+    async function verExpedienteDesdeCliente(mascotaId) {
+        try {
+            const resp = await fetch(`/api/mascotas/${mascotaId}/expediente`);
+            if (!resp.ok) throw new Error("No se pudo cargar el expediente");
+            const data = await resp.json();
+            expedienteDataActual = data;
+
+            const m = data.mascota;
+            document.getElementById('expNombre').textContent = m.nombre;
+            document.getElementById('expEspecieRaza').textContent = `${m.especie} • ${m.raza || 'Mestizo'}`;
+            document.getElementById('expGenero').textContent = m.genero || 'Macho';
+            document.getElementById('expPeso').textContent = m.peso ? `${m.peso} kg` : '-- kg';
+            document.getElementById('expEdad').textContent = `Edad estimada: ${m.edadCalculada || 'No registrada'}`;
+
+            document.getElementById('expPropietario').textContent = m.clienteNombre || 'Sin propietario';
+            document.getElementById('expTelefono').textContent = m.clienteTelefono ? `Tel: ${m.clienteTelefono}` : 'Sin teléfono';
+            document.getElementById('expDni').textContent = m.clienteDni ? `DNI: ${m.clienteDni}` : 'DNI: No registrado';
+
+            const espLower = (m.especie || '').toLowerCase();
+            let icono = '🐾';
+            if (espLower.includes('perro') || espLower.includes('canino')) icono = '🐶';
+            else if (espLower.includes('gato') || espLower.includes('felino')) icono = '🐱';
+            document.getElementById('expIcono').textContent = icono;
+
+            // Badges contadores
+            document.getElementById('countAtenciones').textContent = data.atenciones.length;
+            document.getElementById('countVacunas').textContent = data.vacunas.length;
+            document.getElementById('countAlergias').textContent = data.alergias.length;
+            document.getElementById('countCitas').textContent = data.citas.length;
+
+            // Renderizar secciones
+            renderizarAtencionesModal(data.atenciones);
+            renderizarVacunasModal(data.vacunas);
+            renderizarAlergiasModal(data.alergias);
+            renderizarCitasModal(data.citas);
+
+            cambiarTabExpediente('consultas', document.getElementById('tabBtnConsultas'));
+            document.getElementById('modalExpediente').classList.add('active');
+
+        } catch (e) {
+            console.error(e);
+            mostrarToast("Error al cargar el expediente clínico", "error");
+        }
+    }
+
+    function cambiarTabExpediente(tab, btn) {
+        document.querySelectorAll('#modalExpediente .btn-filter-pill').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+
+        document.getElementById('tabContentConsultas').style.display = tab === 'consultas' ? 'block' : 'none';
+        document.getElementById('tabContentVacunas').style.display = tab === 'vacunas' ? 'block' : 'none';
+        document.getElementById('tabContentAlergias').style.display = tab === 'alergias' ? 'block' : 'none';
+        document.getElementById('tabContentCitas').style.display = tab === 'citas' ? 'block' : 'none';
+    }
+
+    let atencionesExpedienteCliente = [];
+    let paginaAtencionesCliente = 1;
+    const ITEMS_POR_PAGINA_CLIENTE = 2;
+
+    function renderizarAtencionesModal(atenciones, resetPagina = true) {
+        if (resetPagina) {
+            atencionesExpedienteCliente = atenciones || [];
+            paginaAtencionesCliente = 1;
+        }
+
+        const c = document.getElementById('listaAtencionesExpediente');
+        c.innerHTML = '';
+        const total = atencionesExpedienteCliente.length;
+        if (total === 0) {
+            c.innerHTML = '<div style="text-align:center; padding:24px; color:#94a3b8; background:#f8fafc; border-radius:10px;">No registra consultas médicas previas.</div>';
+            return;
+        }
+
+        const totalPaginas = Math.ceil(total / ITEMS_POR_PAGINA_CLIENTE);
+        if (paginaAtencionesCliente > totalPaginas) paginaAtencionesCliente = totalPaginas;
+
+        const inicio = (paginaAtencionesCliente - 1) * ITEMS_POR_PAGINA_CLIENTE;
+        const fin = Math.min(inicio + ITEMS_POR_PAGINA_CLIENTE, total);
+        const atencionesPagina = atencionesExpedienteCliente.slice(inicio, fin);
+
+        atencionesPagina.forEach(a => {
+            const card = document.createElement('div');
+            card.style.cssText = 'background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:14px; border-left:4px solid #0f766e; margin-bottom:10px;';
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                    <strong style="color:#0f766e; font-size:14px;">📅 Consulta: ${a.fecha}</strong>
+                    <span style="color:#64748b; font-size:12px;">Dr(a): <strong>${a.veterinarioNombre}</strong></span>
+                </div>
+                <div style="margin-bottom:4px;"><strong style="font-size:11px; color:#0f172a; text-transform:uppercase;">DIAGNÓSTICO:</strong> <span style="font-size:13px; color:#334155;">${a.diagnostico}</span></div>
+                <div><strong style="font-size:11px; color:#0f172a; text-transform:uppercase;">TRATAMIENTO:</strong> <span style="font-size:12px; color:#475569; white-space:pre-line;">${a.tratamiento}</span></div>
+            `;
+            c.appendChild(card);
+        });
+
+        if (totalPaginas > 1) {
+            const pag = document.createElement('div');
+            pag.className = 'mini-pagination';
+            pag.innerHTML = `
+                <span class="mini-pagination-info">Mostrando ${inicio + 1} - ${fin} de ${total} consultas</span>
+                <div class="mini-pagination-nav">
+                    <button type="button" class="mini-page-btn" ${paginaAtencionesCliente === 1 ? 'disabled' : ''} onclick="cambiarPaginaAtencionesCliente(-1)">&lsaquo; Anterior</button>
+                    <span style="font-size:12px; font-weight:700; color:#0f766e; padding: 2px 6px;">Pág. ${paginaAtencionesCliente} de ${totalPaginas}</span>
+                    <button type="button" class="mini-page-btn" ${paginaAtencionesCliente === totalPaginas ? 'disabled' : ''} onclick="cambiarPaginaAtencionesCliente(1)">Siguiente &rsaquo;</button>
+                </div>
+            `;
+            c.appendChild(pag);
+        }
+    }
+
+    function cambiarPaginaAtencionesCliente(delta) {
+        paginaAtencionesCliente += delta;
+        renderizarAtencionesModal(atencionesExpedienteCliente, false);
+    }
+
+    function renderizarVacunasModal(vacunas) {
+        const c = document.getElementById('listaVacunasExpediente');
+        c.innerHTML = '';
+        if (vacunas.length === 0) {
+            c.innerHTML = '<div style="text-align:center; padding:24px; color:#94a3b8; background:#f8fafc; border-radius:10px;">Sin vacunas registradas en carnet digital.</div>';
+            return;
+        }
+        vacunas.forEach(v => {
+            const card = document.createElement('div');
+            card.style.cssText = 'background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;';
+            card.innerHTML = `
+                <div>
+                    <strong style="color:#166534; font-size:14px;">💉 ${v.nombre}</strong>
+                    <div style="color:#15803d; font-size:12px;">Dosis: ${v.dosis || 'Dosis única'} ${v.observaciones ? '• ' + v.observaciones : ''}</div>
+                </div>
+                <span style="background:#dcfce7; color:#14532d; font-size:12px; font-weight:700; padding:4px 10px; border-radius:12px;">
+                    ${v.fechaAplicacion}
+                </span>
+            `;
+            c.appendChild(card);
+        });
+    }
+
+    function renderizarAlergiasModal(alergias) {
+        const c = document.getElementById('listaAlergiasExpediente');
+        c.innerHTML = '';
+        if (alergias.length === 0) {
+            c.innerHTML = '<div style="text-align:center; padding:20px; color:#16a34a; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px;">✓ Paciente sin alergias o reacciones adversas reportadas.</div>';
+            return;
+        }
+        alergias.forEach(a => {
+            const card = document.createElement('div');
+            card.style.cssText = 'background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;';
+            card.innerHTML = `
+                <div>
+                    <strong style="color:#991b1b; font-size:14px;">⚠️ ${a.nombre}</strong>
+                    <div style="color:#b91c1c; font-size:12px;">Categoría: ${a.categoria || 'Clínica'} • Severidad: <strong>${a.severidad || 'Moderada'}</strong></div>
+                </div>
+                <span style="background:#fee2e2; color:#7f1d1d; font-size:11px; font-weight:700; padding:4px 8px; border-radius:8px;">
+                    ${a.fechaDeteccion || 'Consulta'}
+                </span>
+            `;
+            c.appendChild(card);
+        });
+    }
+
+    function renderizarCitasModal(citas) {
+        const c = document.getElementById('listaCitasExpediente');
+        c.innerHTML = '';
+        if (citas.length === 0) {
+            c.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8; background:#f8fafc; border-radius:10px;">No registra citas en agenda.</div>';
+            return;
+        }
+        citas.forEach(cita => {
+            const card = document.createElement('div');
+            card.style.cssText = 'background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;';
+            card.innerHTML = `
+                <div>
+                    <strong style="color:#0f172a; font-size:14px;">📅 ${cita.fecha} (${cita.hora || '--:--'})</strong>
+                    <div style="color:#64748b; font-size:13px;">Motivo: ${cita.motivo} | ${cita.veterinarioNombre}</div>
+                </div>
+                <span class="badge-status-pill ${cita.estado === 'ATENDIDA' ? 'pill-atendida' : 'pill-programada'}">
+                    ● ${cita.estado}
+                </span>
+            `;
+            c.appendChild(card);
+        });
+    }
+
+    function cerrarModalExpediente() {
+        document.getElementById('modalExpediente').classList.remove('active');
+    }
+
+    /**
+     * IMPRESIÓN COMPLETA A4 DE TODAS LAS SECCIONES DEL EXPEDIENTE
+     */
+    function imprimirExpedienteCompleto() {
+        if (!expedienteDataActual) return;
+        const html = generarDocumentoImpresionA4(expedienteDataActual);
+        const ventana = window.open('', '_blank', 'width=900,height=900');
+        ventana.document.write(html);
+        ventana.document.close();
+        ventana.focus();
+        setTimeout(() => {
+            ventana.print();
+            ventana.close();
+        }, 350);
+    }
+
+    function generarDocumentoImpresionA4(data) {
+        const m = data.mascota || {};
+        const atenciones = data.atenciones || [];
+        const vacunas = data.vacunas || [];
+        const alergias = data.alergias || [];
+        const citas = data.citas || [];
+        const fechaImpresion = new Date().toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+        return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <title>Expediente Clínico - ${m.nombre || 'Mascota'} - SIGEVET</title>
+                <style>
+                    @page { size: A4; margin: 15mm; }
+                    body { font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; margin: 0; padding: 12px; font-size: 13px; line-height: 1.4; }
+                    .doc-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f766e; padding-bottom: 12px; margin-bottom: 16px; }
+                    .doc-brand { font-size: 22px; font-weight: 800; color: #0f766e; }
+                    .doc-sub { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+                    .doc-title { text-align: right; }
+                    .doc-title h1 { margin: 0; font-size: 18px; color: #0f172a; text-transform: uppercase; }
+                    .doc-title p { margin: 2px 0 0; font-size: 11px; color: #64748b; }
+                    .section-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; background: #fafbfc; }
+                    .section-title { font-size: 13px; font-weight: 700; color: #0f766e; text-transform: uppercase; margin: 0 0 8px 0; border-bottom: 1px dashed #cbd5e1; padding-bottom: 4px; }
+                    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+                    .data-item { margin-bottom: 4px; font-size: 12px; }
+                    .data-item strong { color: #334155; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; }
+                    th { padding: 6px 8px; text-align: left; }
+                    td { padding: 6px 8px; border: 1px solid #e2e8f0; }
+                    .sign-row { margin-top: 36px; display: flex; justify-content: flex-end; }
+                    .sign-box { width: 220px; border-top: 1px solid #0f172a; text-align: center; padding-top: 6px; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <div class="doc-header">
+                    <div>
+                        <div class="doc-brand">🐾 SIGEVET</div>
+                        <div class="doc-sub">Sistema de Gestión Veterinaria • Historia Clínica Oficial</div>
+                    </div>
+                    <div class="doc-title">
+                        <h1>Expediente Clínico Integral</h1>
+                        <p>Fecha de emisión: ${fechaImpresion}</p>
+                    </div>
+                </div>
+
+                <div class="section-box">
+                    <div class="section-title">📋 Datos del Paciente y Propietario</div>
+                    <div class="grid-2">
+                        <div>
+                            <div class="data-item"><strong>Paciente:</strong> <span style="font-size:14px; font-weight:800; color:#0f766e;">${m.nombre}</span></div>
+                            <div class="data-item"><strong>Especie / Raza:</strong> ${m.especie} • ${m.raza || 'Mestizo'}</div>
+                            <div class="data-item"><strong>Sexo / Género:</strong> ${m.genero || 'Macho'}</div>
+                            <div class="data-item"><strong>Peso Actual:</strong> ${m.peso ? m.peso + ' kg' : 'No registrado'}</div>
+                            <div class="data-item"><strong>Edad Estimada:</strong> ${m.edadCalculada || 'No registrada'}</div>
+                        </div>
+                        <div>
+                            <div class="data-item"><strong>Propietario:</strong> <span style="font-weight:700;">${m.clienteNombre || 'S/D'}</span></div>
+                            <div class="data-item"><strong>DNI / Documento:</strong> ${m.clienteDni || 'S/D'}</div>
+                            <div class="data-item"><strong>Teléfono:</strong> ${m.clienteTelefono || 'S/D'}</div>
+                            <div class="data-item"><strong>Estado del Paciente:</strong> <span style="color:#16a34a; font-weight:bold;">ACTIVO</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-box" style="border-left: 4px solid #ef4444;">
+                    <div class="section-title" style="color:#991b1b;">⚠️ Alergias y Advertencias Médicas</div>
+                    ${alergias.length === 0 ? '<p style="color:#16a34a; margin:4px 0;">✓ No registra alergias ni reacciones adversas conocidas.</p>' : `
+                        <table>
+                            <thead>
+                                <tr style="background:#fee2e2; color:#991b1b;">
+                                    <th>Alergia / Sustancia</th><th>Categoría</th><th>Severidad</th><th>Fecha Detección</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${alergias.map(a => `<tr><td style="font-weight:bold; color:#b91c1c;">⚠️ ${a.nombre}</td><td>${a.categoria || 'General'}</td><td>${a.severidad || 'Moderada'}</td><td>${a.fechaDeteccion || 'Consulta'}</td></tr>`).join('')}
+                            </tbody>
+                        </table>
+                    `}
+                </div>
+
+                <div class="section-box" style="border-left: 4px solid #10b981;">
+                    <div class="section-title" style="color:#15803d;">💉 Carnet de Vacunación e Inmunizaciones</div>
+                    ${vacunas.length === 0 ? '<p style="color:#64748b; margin:4px 0;">Sin vacunas registradas en carnet digital.</p>' : `
+                        <table>
+                            <thead>
+                                <tr style="background:#dcfce7; color:#166534;">
+                                    <th>Fecha</th><th>Vacuna</th><th>Dosis</th><th>Observaciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${vacunas.map(v => `<tr><td style="font-weight:bold;">${v.fechaAplicacion}</td><td style="font-weight:600; color:#15803d;">💉 ${v.nombre}</td><td>${v.dosis || 'Dosis única'}</td><td>${v.observaciones || '--'}</td></tr>`).join('')}
+                            </tbody>
+                        </table>
+                    `}
+                </div>
+
+                <div class="section-box" style="border-left: 4px solid #0f766e;">
+                    <div class="section-title">🩺 Historial de Consultas Médicas y Prescripciones</div>
+                    ${atenciones.length === 0 ? '<p style="color:#64748b; margin:4px 0;">No registra consultas médicas previas.</p>' : `
+                        <table>
+                            <thead>
+                                <tr style="background:#f1f5f9;">
+                                    <th style="width:90px;">Fecha</th><th style="width:120px;">Veterinario</th><th>Diagnóstico</th><th>Tratamiento y Receta</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${atenciones.map(a => `<tr><td style="font-weight:bold; vertical-align:top;">${a.fecha}</td><td style="vertical-align:top;">${a.veterinarioNombre}</td><td style="font-weight:600; color:#0f766e; vertical-align:top;">${a.diagnostico}</td><td style="vertical-align:top; white-space:pre-line;">${a.tratamiento}</td></tr>`).join('')}
+                            </tbody>
+                        </table>
+                    `}
+                </div>
+
+                <div class="sign-row">
+                    <div class="sign-box">
+                        <strong>Firma y Sello Veterinario</strong><br>
+                        <span style="color:#64748b; font-size:11px;">Clínica Veterinaria SIGEVET</span>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
     }
 
     /**

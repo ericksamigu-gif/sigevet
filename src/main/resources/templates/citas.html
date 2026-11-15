@@ -22,23 +22,11 @@
             <!-- TÍTULO Y ACCIONES -->
             <div class="page-header-row">
                 <div class="page-title-group">
-                    <h1>
-                        Gestión de Citas
-                        <span class="badge-live">En vivo</span>
-                    </h1>
-                    <p>Agenda diaria, programación médica y control de turnos en tiempo real.</p>
+                    <h1>Gestión de Citas</h1>
+                    <p>Agenda diaria interactiva, programación por turnos y control clínico de citas.</p>
                 </div>
 
                 <div class="header-actions">
-                    <button class="btn-secondary" onclick="recargarCitas()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M23 4v6h-6"></path>
-                            <path d="M1 20v-6h6"></path>
-                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                        </svg>
-                        Refrescar
-                    </button>
-
                     <button class="btn-primary" onclick="abrirModalCrear()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -88,29 +76,123 @@
                 </div>
             </section>
 
-            <!-- FILTRO DE ESTADO Y BUSCADOR -->
-            <div class="filter-tabs-row">
-                <div class="filter-pills">
-                    <button class="btn-filter-pill active" onclick="filtrarPorEstado('TODOS', this)">Todas las citas</button>
-                    <button class="btn-filter-pill" onclick="filtrarPorEstado('PROGRAMADA', this)">Programadas</button>
-                    <button class="btn-filter-pill" onclick="filtrarPorEstado('PENDIENTE', this)">Pendientes</button>
-                    <button class="btn-filter-pill" onclick="filtrarPorEstado('ATENDIDA', this)">Atendidas</button>
-                    <button class="btn-filter-pill" onclick="filtrarPorEstado('CANCELADA', this)">Canceladas</button>
+            <!-- SELECTOR DE VISTA DUAL: AGENDA HORARIA vs LISTA GENERAL -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+                <div class="view-toggle-container">
+                    <button class="btn-view-toggle active" id="btnToggleAgenda" onclick="cambiarModoVista('agenda')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        Vista Agenda Horaria
+                    </button>
+                    <button class="btn-view-toggle" id="btnToggleLista" onclick="cambiarModoVista('lista')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="8" y1="6" x2="21" y2="6"></line>
+                            <line x1="8" y1="12" x2="21" y2="12"></line>
+                            <line x1="8" y1="18" x2="21" y2="18"></line>
+                            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                        </svg>
+                        Vista Lista & Búsqueda
+                    </button>
                 </div>
 
-                <div class="filter-search-input">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                    <input type="text" id="filtroTexto" placeholder="Buscar por paciente, motivo o veterinario..." oninput="filtrarPorTexto(this.value)">
+                <div style="font-size:13px; color:#64748b;">
+                    Jornada clínica activa: <strong>08:00 AM - 07:00 PM</strong>
                 </div>
             </div>
 
-            <!-- CONTENEDOR DE TARJETAS DE CITA (ESTILO MOCKUP) -->
-            <div class="citas-cards-container" id="citasContainer">
-                <div style="background:white; padding:40px; text-align:center; border-radius:12px; color:#94a3b8;">
-                    Cargando citas médicas desde el servidor...
+            <!-- ==========================================================
+                 VISTA 1: AGENDA HORARIA DEL DÍA (INTERACTIVA)
+                 ========================================================== -->
+            <div id="seccionAgendaView">
+                <!-- BARRA DE NAVEGACIÓN DE FECHAS -->
+                <div class="agenda-toolbar">
+                    <div class="agenda-date-controls">
+                        <button class="btn-nav-date" title="Día Anterior" onclick="cambiarDiaRelativo(-1)">&lsaquo;</button>
+                        <button class="btn-today-quick" onclick="irAHoy()">Hoy</button>
+                        <button class="btn-nav-date" title="Día Siguiente" onclick="cambiarDiaRelativo(1)">&rsaquo;</button>
+                        <input type="date" id="agendaFechaPicker" class="agenda-date-input" onchange="seleccionarFechaAgenda(this.value)">
+                    </div>
+
+                    <div class="agenda-display-title" id="agendaFechaTitulo">
+                        Cargando agenda...
+                    </div>
+
+                    <div>
+                        <span style="font-size:12px; color:#64748b; background:#f1f5f9; padding:6px 12px; border-radius:20px; font-weight:600;" id="contadorCitasDia">
+                            0 citas agendadas hoy
+                        </span>
+                    </div>
+                </div>
+
+                <!-- GRILLA DE HORARIOS DE LA JORNADA -->
+                <div class="agenda-schedule-card">
+                    <div class="agenda-slots-table" id="agendaSlotsContainer">
+                        <!-- Generado dinámicamente de 08:00 a 19:00 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==========================================================
+                 VISTA 2: LISTA GENERAL & BÚSQUEDA TRADICIONAL
+                 ========================================================== -->
+            <div id="seccionListaView" style="display:none;">
+                <!-- TOOLBAR DE FILTROS & BÚSQUEDA -->
+                <div class="filter-toolbar">
+                    <div class="filter-toolbar-group">
+                        <div class="filter-search-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <input type="text" id="filtroTexto" placeholder="Buscar por paciente, motivo o veterinario..." onkeydown="if(event.key==='Enter') aplicarFiltrosLista()">
+                        </div>
+
+                        <select id="filtroEstadoLista" class="filter-select" onchange="aplicarFiltrosLista()">
+                            <option value="TODOS">Todos los estados</option>
+                            <option value="PROGRAMADA">Solo Programadas</option>
+                            <option value="PENDIENTE">Solo Pendientes</option>
+                            <option value="ATENDIDA">Solo Atendidas</option>
+                            <option value="CANCELADA">Solo Canceladas</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-actions">
+                        <button class="btn-filter-search" onclick="aplicarFiltrosLista()">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            Buscar
+                        </button>
+                        <button class="btn-filter-reset" onclick="limpiarFiltrosLista()">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                                <path d="M3 3v5h5"></path>
+                            </svg>
+                            Limpiar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CONTENEDOR DE TARJETAS DE CITA -->
+                <div class="citas-cards-container" id="citasContainer">
+                    <!-- Tarjetas de citas -->
+                </div>
+
+                <!-- PAGINACIÓN DE LISTA -->
+                <div class="pagination-container" id="paginacionContainerLista" style="display:none; margin-top:16px;">
+                    <div class="pagination-info" id="paginacionInfoLista">
+                        Mostrando 0 de 0 citas
+                    </div>
+                    <div class="pagination-nav" id="paginacionNavLista">
+                        <!-- Botones dinámicos -->
+                    </div>
                 </div>
             </div>
 
@@ -120,12 +202,12 @@
 
 </div>
 
-<!-- MODAL REGISTRAR / EDITAR CITA -->
+<!-- ================= MODAL REGISTRAR / EDITAR CITA ================= -->
 <div class="modal-overlay" id="modalCita">
     <div class="modal-container">
         <div class="modal-header">
             <h3 id="modalTitulo"><span>📅</span> Programar Nueva Cita</h3>
-            <button class="btn-close-modal" onclick="cerrarModalCita()" style="background:none; border:none; font-size:22px; cursor:pointer; color:#94a3b8;">&times;</button>
+            <button class="btn-close-modal" onclick="cerrarModalCita()">&times;</button>
         </div>
 
         <form id="formCita" onsubmit="guardarCita(event)">
@@ -160,7 +242,7 @@
 
                 <div class="form-group">
                     <label for="inputMotivo">Motivo de la Consulta *</label>
-                    <input type="text" id="inputMotivo" placeholder="Ej: Control general, Vacunación Séxtuple, etc." required maxlength="255">
+                    <input type="text" id="inputMotivo" placeholder="Ej: Control general, Vacunación Séxtuple, Desparasitación..." required maxlength="255">
                 </div>
 
                 <div class="form-group">
@@ -239,26 +321,138 @@
     </div>
 </div>
 
+<!-- ================= MODAL VER FICHA Y RECETA DE ATENCIÓN ================= -->
+<div class="modal-overlay" id="modalFichaAtencion">
+    <div class="modal-container" style="max-width: 650px;">
+        <div class="modal-header">
+            <h3><span>📋</span> Ficha de Atención Médica y Receta</h3>
+            <button class="btn-close-modal" onclick="cerrarModalFichaAtencion()">&times;</button>
+        </div>
+
+        <div class="modal-body" id="imprimibleFichaCita">
+            <!-- CABECERA -->
+            <div style="border-bottom:2px solid #0f766e; padding-bottom:12px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h2 style="color:#0f766e; font-size:18px; font-weight:800; margin:0;">🐾 SIGEVET - CLÍNICA VETERINARIA</h2>
+                    <small style="color:#64748b;">Comprobante de Consulta Médica Oficial</small>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-weight:700; color:#0f172a; font-size:13px;" id="fichaFecha">--/--/----</div>
+                    <small style="color:#94a3b8;" id="fichaFolio">Folio: #--</small>
+                </div>
+            </div>
+
+            <!-- DATOS PACIENTE / DUEÑO -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 16px; margin-bottom:16px; display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px;">
+                <div>
+                    <span style="color:#64748b; display:block; font-size:11px; font-weight:700; text-transform:uppercase;">Paciente:</span>
+                    <strong style="font-size:15px; color:#0f172a;" id="fichaPaciente">--</strong>
+                    <div style="color:#475569;" id="fichaEspecieRaza">--</div>
+                </div>
+                <div>
+                    <span style="color:#64748b; display:block; font-size:11px; font-weight:700; text-transform:uppercase;">Propietario:</span>
+                    <strong style="font-size:15px; color:#0f172a;" id="fichaPropietario">--</strong>
+                    <div style="color:#475569;" id="fichaTelefono">Tel: --</div>
+                </div>
+            </div>
+
+            <!-- DIAGNÓSTICO -->
+            <div style="margin-bottom:14px;">
+                <h4 style="font-size:12px; font-weight:800; color:#0f766e; text-transform:uppercase; margin-bottom:4px;">
+                    🩺 Diagnóstico Clínico:
+                </h4>
+                <div style="background:#f8fafc; border-left:4px solid #0f766e; padding:10px 14px; font-size:13px; color:#1e293b; border-radius:0 8px 8px 0;" id="fichaDiagnostico">
+                    --
+                </div>
+            </div>
+
+            <!-- TRATAMIENTO Y RECETA -->
+            <div style="margin-bottom:14px;">
+                <h4 style="font-size:12px; font-weight:800; color:#2563eb; text-transform:uppercase; margin-bottom:4px;">
+                    💊 Tratamiento y Prescripción Médica:
+                </h4>
+                <div style="background:#eff6ff; border-left:4px solid #2563eb; padding:10px 14px; font-size:13px; color:#1e293b; border-radius:0 8px 8px 0; white-space:pre-line;" id="fichaTratamiento">
+                    --
+                </div>
+            </div>
+
+            <!-- VACUNAS Y ALERGIAS -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; font-size:12px;">
+                <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:8px 12px;">
+                    <strong style="color:#166534; display:block; margin-bottom:2px;">💉 Vacunas aplicadas:</strong>
+                    <span style="color:#14532d;" id="fichaVacunas">Ninguna</span>
+                </div>
+                <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:8px 12px;">
+                    <strong style="color:#991b1b; display:block; margin-bottom:2px;">⚠️ Alergias observadas:</strong>
+                    <span style="color:#7f1d1d;" id="fichaAlergias">Ninguna</span>
+                </div>
+            </div>
+
+            <!-- FIRMA DEL VETERINARIO -->
+            <div style="margin-top:20px; padding-top:12px; border-top:1px dashed #cbd5e1; display:flex; justify-content:space-between; align-items:flex-end;">
+                <div>
+                    <small style="color:#94a3b8; font-size:11px;">SIGEVET Cloud • Consulta concluida y archivada.</small>
+                </div>
+                <div style="text-align:center; min-width:180px;">
+                    <div style="border-bottom:1px solid #0f172a; width:100%; margin-bottom:4px;"></div>
+                    <strong style="font-size:12px; color:#0f172a; display:block;" id="fichaVeterinario">Dr. --</strong>
+                    <span style="font-size:11px; color:#64748b;">Médico Veterinario</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="cerrarModalFichaAtencion()">Cerrar</button>
+            <button type="button" class="btn-primary" onclick="imprimirFichaCita()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                Imprimir Receta
+            </button>
+        </div>
+    </div>
+</div>
+
 <div th:replace="~{fragments/layout :: toastContainer}"></div>
 
-<!-- ================= JAVASCRIPT DINÁMICO (PATRÓN MVC REST) ================= -->
+<!-- ================= JAVASCRIPT DINÁMICO ================= -->
 <script>
+    // Variables de estado
     let citasGlobal = [];
-    let estadoFiltroActivo = 'TODOS';
+    let fechaAgendaSeleccionada = '';
+    let modoVistaActual = 'agenda'; // 'agenda' o 'lista'
     let mascotasLista = [];
     let veterinariosLista = [];
 
+    // Estado para paginación de vista lista
+    let citasFiltradasLista = [];
+    let paginaActualLista = 1;
+    const ITEMS_POR_PAGINA_LISTA = 6;
+
+    // Horarios de la jornada clínica (de 08:00 a 19:00)
+    const HORAS_JORNADA = [
+        '08:00', '09:00', '10:00', '11:00', '12:00',
+        '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'
+    ];
+
     document.addEventListener("DOMContentLoaded", () => {
+        // Inicializar fecha de hoy
+        const hoy = new Date().toISOString().split('T')[0];
+        fechaAgendaSeleccionada = hoy;
+        document.getElementById('agendaFechaPicker').value = hoy;
+        document.getElementById('inputFecha').value = hoy;
+
         cargarCitas();
         cargarEstadisticas();
         cargarComboMascotas();
         cargarComboVeterinarios();
-
-        // Poner fecha de hoy por defecto al crear
-        const hoy = new Date().toISOString().split('T')[0];
-        document.getElementById('inputFecha').value = hoy;
     });
 
+    /**
+     * Consume la API REST GET /api/citas
+     */
     async function cargarCitas() {
         try {
             const resp = await fetch('/api/citas');
@@ -267,7 +461,13 @@
                 return;
             }
             citasGlobal = await resp.json();
-            aplicarFiltros();
+
+            // Renderizar según la vista activa
+            if (modoVistaActual === 'agenda') {
+                renderizarAgenda();
+            } else {
+                aplicarFiltrosLista();
+            }
         } catch (error) {
             console.error("Error al cargar citas:", error);
             mostrarToast("Error al cargar las citas", "error");
@@ -327,20 +527,272 @@
         }
     }
 
-    function renderizarCitas(lista) {
-        const container = document.getElementById('citasContainer');
+    /**
+     * Alternar entre Vista Agenda y Vista Lista
+     */
+    function cambiarModoVista(modo) {
+        modoVistaActual = modo;
+        if (modo === 'agenda') {
+            document.getElementById('btnToggleAgenda').classList.add('active');
+            document.getElementById('btnToggleLista').classList.remove('active');
+            document.getElementById('seccionAgendaView').style.display = 'block';
+            document.getElementById('seccionListaView').style.display = 'none';
+            renderizarAgenda();
+        } else {
+            document.getElementById('btnToggleLista').classList.add('active');
+            document.getElementById('btnToggleAgenda').classList.remove('active');
+            document.getElementById('seccionAgendaView').style.display = 'none';
+            document.getElementById('seccionListaView').style.display = 'block';
+            aplicarFiltrosLista();
+        }
+    }
+
+    /**
+     * =========================================================================
+     * VISTA AGENDA HORARIA (POR DÍA Y HORAS)
+     * =========================================================================
+     */
+    function seleccionarFechaAgenda(fecha) {
+        fechaAgendaSeleccionada = fecha;
+        renderizarAgenda();
+    }
+
+    function irAHoy() {
+        const hoy = new Date().toISOString().split('T')[0];
+        fechaAgendaSeleccionada = hoy;
+        document.getElementById('agendaFechaPicker').value = hoy;
+        renderizarAgenda();
+    }
+
+    function cambiarDiaRelativo(deltaDias) {
+        const d = new Date(fechaAgendaSeleccionada + 'T00:00:00');
+        d.setDate(d.getDate() + deltaDias);
+        const nuevoStr = d.toISOString().split('T')[0];
+        fechaAgendaSeleccionada = nuevoStr;
+        document.getElementById('agendaFechaPicker').value = nuevoStr;
+        renderizarAgenda();
+    }
+
+    function formatearTituloFecha(fechaStr) {
+        try {
+            const d = new Date(fechaStr + 'T00:00:00');
+            const opciones = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            const formateado = d.toLocaleDateString('es-ES', opciones);
+            return formateado.charAt(0).toUpperCase() + formateado.slice(1);
+        } catch (e) {
+            return fechaStr;
+        }
+    }
+
+    function renderizarAgenda() {
+        const container = document.getElementById('agendaSlotsContainer');
+        const titulo = document.getElementById('agendaFechaTitulo');
+        const contador = document.getElementById('contadorCitasDia');
         container.innerHTML = '';
 
-        if (lista.length === 0) {
-            container.innerHTML = `
-                <div style="background:white; padding:40px; text-align:center; border-radius:12px; color:#94a3b8;">
-                    No se encontraron citas con los filtros seleccionados.
+        titulo.textContent = formatearTituloFecha(fechaAgendaSeleccionada);
+
+        // Filtrar citas correspondientes al día seleccionado
+        const citasDelDia = citasGlobal.filter(c => c.fecha === fechaAgendaSeleccionada);
+        contador.textContent = `${citasDelDia.length} ${citasDelDia.length === 1 ? 'cita programada' : 'citas programadas'}`;
+
+        HORAS_JORNADA.forEach(horaSlot => {
+            const row = document.createElement('div');
+            row.className = 'agenda-slot-row';
+
+            const horaNum = parseInt(horaSlot.split(':')[0], 10);
+            const periodo = horaNum >= 12 ? 'PM' : 'AM';
+            const hora12 = horaNum > 12 ? (horaNum - 12) + ':00' : horaSlot;
+
+            // Buscar si hay citas en este slot de hora
+            const citasEnSlot = citasDelDia.filter(c => {
+                const horaCita = (c.horaFormateada || '').trim();
+                if (!horaCita) return false;
+                const hNum = parseInt(horaCita.split(':')[0], 10);
+                return hNum === horaNum;
+            });
+
+            let bodyHTML = '';
+            if (citasEnSlot.length === 0) {
+                // Horario libre: botón de agendar con 1 click
+                bodyHTML = `
+                    <button class="btn-slot-available" onclick="abrirModalCrearConHorario('${fechaAgendaSeleccionada}', '${horaSlot}')">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Disponible (Clic para agendar a las ${hora12} ${periodo})
+                    </button>
+                `;
+            } else {
+                // Hay cita(s) en este slot: renderizar tarjetas
+                citasEnSlot.forEach(c => {
+                    const estado = (c.estado || 'PROGRAMADA').toUpperCase();
+                    let statusClass = 'status-programada';
+                    let pillClass = 'pill-programada';
+
+                    if (estado === 'ATENDIDA') {
+                        statusClass = 'status-atendida';
+                        pillClass = 'pill-atendida';
+                    } else if (estado === 'PENDIENTE') {
+                        statusClass = 'status-pendiente';
+                        pillClass = 'pill-pendiente';
+                    } else if (estado === 'CANCELADA') {
+                        statusClass = 'status-cancelada';
+                        pillClass = 'pill-cancelada';
+                    }
+
+                    const espLower = (c.mascotaEspecie || '').toLowerCase();
+                    let petIcon = '🐾';
+                    if (espLower.includes('perro') || espLower.includes('canino')) petIcon = '🐶';
+                    else if (espLower.includes('gato') || espLower.includes('felino')) petIcon = '🐱';
+
+                    const puedeAtender = estado !== 'ATENDIDA' && estado !== 'CANCELADA';
+
+                    bodyHTML += `
+                        <div class="agenda-appointment-card ${statusClass}">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div style="font-size:26px;">${petIcon}</div>
+                                <div>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <strong style="color:#0f172a; font-size:15px;">${c.mascotaNombre}</strong>
+                                        <span style="font-size:12px; color:#64748b;">(${c.mascotaEspecie || 'Mascota'})</span>
+                                        <span class="badge-status-pill ${pillClass}">● ${estado}</span>
+                                    </div>
+                                    <div style="font-size:13px; color:#334155; margin-top:2px;">
+                                        <strong>Motivo:</strong> ${c.motivo || 'Consulta General'}
+                                    </div>
+                                    <div style="font-size:12px; color:#64748b; margin-top:2px;">
+                                        👤 Propietario: <strong>${c.clienteNombre}</strong> | 🩺 ${c.veterinarioNombre} | ⏰ Hora: <strong>${c.horaFormateada || horaSlot}</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                ${puedeAtender ? `
+                                    <button class="btn-atender-quick" onclick="abrirModalAtenderCita(${c.id})">
+                                        ✓ Atender Consulta
+                                    </button>
+                                ` : (estado === 'ATENDIDA' ? `
+                                    <button type="button" class="btn-atender-quick" style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0;" onclick="verAtencionDesdeCita(${c.id})" title="Ver Ficha y Receta Médica">
+                                        📋 Ver Atención / Receta
+                                    </button>
+                                ` : '')}
+
+                                <button class="btn-icon-action" title="Editar cita" onclick="abrirModalEditar(${c.id})">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                </button>
+
+                                <button class="btn-icon-action delete" title="Cancelar / Eliminar" onclick="eliminarCita(${c.id})">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            row.innerHTML = `
+                <div class="agenda-slot-time">
+                    <div class="agenda-slot-hour">${hora12}</div>
+                    <div class="agenda-slot-period">${periodo}</div>
+                </div>
+                <div class="agenda-slot-body">
+                    ${bodyHTML}
                 </div>
             `;
+
+            container.appendChild(row);
+        });
+    }
+
+    /**
+     * Clic en horario disponible de la agenda: autocompleta fecha y hora
+     */
+    function abrirModalCrearConHorario(fecha, hora) {
+        abrirModalCrear();
+        document.getElementById('inputFecha').value = fecha;
+        document.getElementById('inputHora').value = hora;
+    }
+
+    /**
+     * =========================================================================
+     * VISTA LISTA & BÚSQUEDA TRADICIONAL
+     * =========================================================================
+     */
+    function aplicarFiltrosLista() {
+        const q = (document.getElementById('filtroTexto').value || '').toLowerCase().trim();
+        const estado = document.getElementById('filtroEstadoLista').value;
+
+        citasFiltradasLista = citasGlobal.filter(c => {
+            const cumpleTexto = !q ||
+                (c.mascotaNombre && c.mascotaNombre.toLowerCase().includes(q)) ||
+                (c.motivo && c.motivo.toLowerCase().includes(q)) ||
+                (c.clienteNombre && c.clienteNombre.toLowerCase().includes(q)) ||
+                (c.veterinarioNombre && c.veterinarioNombre.toLowerCase().includes(q));
+
+            const cumpleEstado = (estado === 'TODOS') || ((c.estado || '').toUpperCase() === estado);
+
+            return cumpleTexto && cumpleEstado;
+        });
+
+        paginaActualLista = 1;
+        renderizarPaginacionLista();
+    }
+
+    function limpiarFiltrosLista() {
+        document.getElementById('filtroTexto').value = '';
+        document.getElementById('filtroEstadoLista').value = 'TODOS';
+        aplicarFiltrosLista();
+    }
+
+    function filtrarGlobal(query) {
+        document.getElementById('filtroTexto').value = query;
+        if (modoVistaActual !== 'lista') {
+            cambiarModoVista('lista');
+        } else {
+            aplicarFiltrosLista();
+        }
+    }
+
+    function renderizarPaginacionLista() {
+        const container = document.getElementById('citasContainer');
+        const pagContainer = document.getElementById('paginacionContainerLista');
+        const pagInfo = document.getElementById('paginacionInfoLista');
+        const pagNav = document.getElementById('paginacionNavLista');
+        container.innerHTML = '';
+
+        const totalRegistros = citasFiltradasLista.length;
+
+        if (totalRegistros === 0) {
+            container.innerHTML = `
+                <div class="empty-state-row" style="background:white; border-radius:12px; border:1px solid #e2e8f0;">
+                    <div class="empty-state-icon">📅</div>
+                    <div class="empty-state-title">No se encontraron citas</div>
+                    <div class="empty-state-desc">Ajusta los filtros o busca con otro término.</div>
+                </div>
+            `;
+            pagContainer.style.display = 'none';
             return;
         }
 
-        lista.forEach(c => {
+        pagContainer.style.display = 'flex';
+        const totalPaginas = Math.ceil(totalRegistros / ITEMS_POR_PAGINA_LISTA);
+        if (paginaActualLista > totalPaginas) paginaActualLista = totalPaginas;
+
+        const inicio = (paginaActualLista - 1) * ITEMS_POR_PAGINA_LISTA;
+        const fin = Math.min(inicio + ITEMS_POR_PAGINA_LISTA, totalRegistros);
+        const citasPagina = citasFiltradasLista.slice(inicio, fin);
+
+        pagInfo.innerHTML = `Mostrando <strong>${inicio + 1} - ${fin}</strong> de <strong>${totalRegistros}</strong> citas`;
+
+        citasPagina.forEach(c => {
             const card = document.createElement('div');
             const estado = (c.estado || 'PROGRAMADA').toUpperCase();
             let statusClass = 'status-programada';
@@ -401,9 +853,9 @@
                             ✓ Atender Consulta
                         </button>
                     ` : (estado === 'ATENDIDA' ? `
-                        <a href="/historial" class="btn-atender-quick" style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; text-decoration:none;">
-                            📋 Ver en Historial
-                        </a>
+                        <button type="button" class="btn-atender-quick" style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0;" onclick="verAtencionDesdeCita(${c.id})" title="Ver Ficha y Receta Médica">
+                            📋 Ver Atención / Receta
+                        </button>
                     ` : '')}
 
                     <button class="btn-icon-action" title="Editar cita" onclick="abrirModalEditar(${c.id})">
@@ -424,57 +876,49 @@
 
             container.appendChild(card);
         });
-    }
 
-    function filtrarPorEstado(estado, btn) {
-        estadoFiltroActivo = estado;
-        document.querySelectorAll('.btn-filter-pill').forEach(b => b.classList.remove('active'));
-        if (btn) btn.classList.add('active');
-        aplicarFiltros();
-    }
+        // Paginación botones
+        pagNav.innerHTML = '';
+        const btnPrev = document.createElement('button');
+        btnPrev.className = 'page-btn';
+        btnPrev.innerHTML = '&lsaquo; Anterior';
+        btnPrev.disabled = paginaActualLista === 1;
+        btnPrev.onclick = () => { if (paginaActualLista > 1) { paginaActualLista--; renderizarPaginacionLista(); } };
+        pagNav.appendChild(btnPrev);
 
-    function filtrarPorTexto() {
-        aplicarFiltros();
-    }
-
-    function filtrarGlobal(query) {
-        document.getElementById('filtroTexto').value = query;
-        aplicarFiltros();
-    }
-
-    function aplicarFiltros() {
-        const q = (document.getElementById('filtroTexto').value || '').toLowerCase().trim();
-
-        let filtradas = citasGlobal;
-        if (estadoFiltroActivo !== 'TODOS') {
-            filtradas = filtradas.filter(c => (c.estado || '').toUpperCase() === estadoFiltroActivo);
+        for (let i = 1; i <= totalPaginas; i++) {
+            if (i === 1 || i === totalPaginas || (i >= paginaActualLista - 1 && i <= paginaActualLista + 1)) {
+                const btnNum = document.createElement('button');
+                btnNum.className = `page-btn ${i === paginaActualLista ? 'active' : ''}`;
+                btnNum.textContent = i;
+                btnNum.onclick = () => { paginaActualLista = i; renderizarPaginacionLista(); };
+                pagNav.appendChild(btnNum);
+            } else if (i === paginaActualLista - 2 || i === paginaActualLista + 2) {
+                const dots = document.createElement('span');
+                dots.style.cssText = 'padding:0 4px; color:#94a3b8; font-weight:700;';
+                dots.textContent = '...';
+                pagNav.appendChild(dots);
+            }
         }
 
-        if (q) {
-            filtradas = filtradas.filter(c =>
-                (c.mascotaNombre && c.mascotaNombre.toLowerCase().includes(q)) ||
-                (c.motivo && c.motivo.toLowerCase().includes(q)) ||
-                (c.clienteNombre && c.clienteNombre.toLowerCase().includes(q)) ||
-                (c.veterinarioNombre && c.veterinarioNombre.toLowerCase().includes(q))
-            );
-        }
-
-        renderizarCitas(filtradas);
+        const btnNext = document.createElement('button');
+        btnNext.className = 'page-btn';
+        btnNext.innerHTML = 'Siguiente &rsaquo;';
+        btnNext.disabled = paginaActualLista === totalPaginas;
+        btnNext.onclick = () => { if (paginaActualLista < totalPaginas) { paginaActualLista++; renderizarPaginacionLista(); } };
+        pagNav.appendChild(btnNext);
     }
 
-    function recargarCitas() {
-        document.getElementById('filtroTexto').value = '';
-        document.getElementById('globalSearch').value = '';
-        cargarCitas();
-        cargarEstadisticas();
-        mostrarToast("Agenda actualizada", "success");
-    }
-
+    /**
+     * =========================================================================
+     * MODALES & CRUD DE CITAS
+     * =========================================================================
+     */
     function abrirModalCrear() {
         document.getElementById('formCita').reset();
         document.getElementById('citaId').value = '';
-        const hoy = new Date().toISOString().split('T')[0];
-        document.getElementById('inputFecha').value = hoy;
+        document.getElementById('inputFecha').value = fechaAgendaSeleccionada || new Date().toISOString().split('T')[0];
+        document.getElementById('inputHora').value = '09:00';
         document.getElementById('inputEstado').value = 'PROGRAMADA';
         document.getElementById('modalTitulo').innerHTML = '<span>➕</span> Programar Nueva Cita';
         document.getElementById('btnGuardar').textContent = 'Guardar Cita';
@@ -606,24 +1050,6 @@
         }
     }
 
-    async function marcarAtendida(id) {
-        try {
-            const resp = await fetch(`/api/citas/${id}/estado`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ estado: 'ATENDIDA' })
-            });
-
-            if (resp.ok) {
-                mostrarToast("Cita marcada como ATENDIDA", "success");
-                cargarCitas();
-                cargarEstadisticas();
-            }
-        } catch (e) {
-            mostrarToast("Error al actualizar estado", "error");
-        }
-    }
-
     async function eliminarCita(id) {
         if (!confirm("¿Desea cancelar y eliminar esta cita de la agenda?")) return;
 
@@ -637,6 +1063,68 @@
         } catch (e) {
             mostrarToast("Error de conexión", "error");
         }
+    }
+
+    /**
+     * Ver atención y receta médica vinculada a la cita (Modal In Situ)
+     */
+    async function verAtencionDesdeCita(citaId) {
+        try {
+            const resp = await fetch(`/api/atenciones/por-cita/${citaId}`);
+            if (!resp.ok) throw new Error("No se pudo obtener la atención");
+            const data = await resp.json();
+
+            if (!data.existe || !data.atencion) {
+                mostrarToast("Esta cita aún no tiene registrada su atención médica.", "info");
+                return;
+            }
+
+            const a = data.atencion;
+            document.getElementById('fichaFolio').textContent = `Folio: #AT-${a.id} (Cita #${citaId})`;
+            document.getElementById('fichaFecha').textContent = a.fecha || '--';
+            document.getElementById('fichaPaciente').textContent = a.mascotaNombre || '--';
+            document.getElementById('fichaEspecieRaza').textContent = `${a.mascotaEspecie || ''} • ${a.mascotaRaza || ''}`;
+            document.getElementById('fichaPropietario').textContent = a.clienteNombre || '--';
+            document.getElementById('fichaTelefono').textContent = `Tel: ${a.clienteTelefono || 'S/D'}`;
+            document.getElementById('fichaDiagnostico').textContent = a.diagnostico || '--';
+            document.getElementById('fichaTratamiento').textContent = a.tratamiento || '--';
+            document.getElementById('fichaVacunas').textContent = a.vacunas || 'Ninguna registrada en esta consulta';
+            document.getElementById('fichaAlergias').textContent = a.alergias || 'Ninguna observada';
+            document.getElementById('fichaVeterinario').textContent = a.veterinarioNombre || 'Médico Veterinario';
+
+            document.getElementById('modalFichaAtencion').classList.add('active');
+        } catch (e) {
+            mostrarToast("Error al cargar la atención médica", "error");
+        }
+    }
+
+    function cerrarModalFichaAtencion() {
+        document.getElementById('modalFichaAtencion').classList.remove('active');
+    }
+
+    function imprimirFichaCita() {
+        const contenido = document.getElementById('imprimibleFichaCita').innerHTML;
+        const ventana = window.open('', '_blank', 'width=800,height=900');
+        ventana.document.write(`
+            <html>
+                <head>
+                    <title>Receta Médica - SIGEVET</title>
+                    <style>
+                        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #0f172a; }
+                        h2, h3, h4 { margin: 0; }
+                    </style>
+                </head>
+                <body>
+                    ${contenido}
+                </body>
+            </html>
+        `);
+        ventana.document.close();
+        ventana.focus();
+        setTimeout(() => {
+            ventana.print();
+            ventana.close();
+        }, 300);
     }
 
     function mostrarToast(mensaje, tipo = "info") {

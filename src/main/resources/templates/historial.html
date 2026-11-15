@@ -30,7 +30,7 @@
                         <p>Directorio médico agrupado por paciente. Consulta expedientes integrales y recetas emitidas.</p>
                     </div>
 
-                    <div class="header-actions">
+                    <div class="header-actions" th:if="${(usuario != null and usuario.rol != 'RECEPCIONISTA') or (session.usuario != null and session.usuario.rol != 'RECEPCIONISTA')}">
                         <button class="btn-primary" onclick="abrirModalCrear()">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -419,7 +419,11 @@
 <div th:replace="~{fragments/layout :: toastContainer}"></div>
 
 <!-- ================= JAVASCRIPT DINÁMICO ================= -->
-<script>
+<script th:inline="javascript">
+    // Control de roles RBAC
+    const rolUsuarioActual = /*[[${usuario != null ? usuario.rol : (session.usuario != null ? session.usuario.rol : '')}]]*/ '';
+    const esClinico = (rolUsuarioActual === 'ADMINISTRADOR' || rolUsuarioActual === 'VETERINARIO');
+
     // Variables globales
     let pacientesGlobal = [];
     let pacientesFiltrados = [];
@@ -794,7 +798,7 @@
             c.innerHTML = `
                 <div style="text-align:center; padding:36px; color:#94a3b8; background:#f8fafc; border-radius:10px;">
                     <p>Este paciente aún no registra consultas médicas en su historial.</p>
-                    <button class="btn-primary" style="margin-top:8px;" onclick="abrirModalCrear()">+ Registrar Consulta</button>
+                    ${esClinico ? '<button class="btn-primary" style="margin-top:8px;" onclick="abrirModalCrear()">+ Registrar Consulta</button>' : ''}
                 </div>
             `;
             return;
@@ -1063,6 +1067,11 @@
      * =========================================================================
      */
     function abrirModalCrear() {
+        if (!esClinico) {
+            mostrarToast("Acceso denegado: Se requiere rol VETERINARIO o ADMINISTRADOR para registrar consultas.", "error");
+            return;
+        }
+
         document.getElementById('formAtencion').reset();
         document.getElementById('atencionId').value = '';
         const hoy = new Date().toISOString().split('T')[0];

@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/layout :: head('Gestión de Usuarios - SIGEVET')}"></head>
+
+<body>
+
+    <!-- MENÚ LATERAL PERSISTENTE -->
+    <aside th:replace="~{fragments/layout :: sidebar('usuarios')}"></aside>
+
+    <!-- ÁREA DE CONTENIDO PRINCIPAL -->
+    <div class="main-wrapper">
+
+        <!-- BARRA SUPERIOR DE NAVEGACIÓN -->
+        <header th:replace="~{fragments/layout :: topbar('Buscar usuario por nombre, usuario o rol...')}"></header>
+
+        <!-- CONTENIDO DE LA PÁGINA -->
+        <main class="content-body">
+
+            <!-- TÍTULO Y ACCIONES -->
+            <div class="page-header-row">
+                <div class="page-title-group">
+                    <h1>Gestión de Usuarios y Accesos</h1>
+                    <p>Administración del personal de la clínica, control de roles (RBAC) y estados de cuenta.</p>
+                </div>
+
+                <div class="header-actions">
+                    <button class="btn-primary" onclick="abrirModalCrear()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Nuevo Usuario
+                    </button>
+                </div>
+            </div>
+
+            <!-- TARJETAS MÉTRICAS (KPIS) -->
+            <section class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">TOTAL PERSONAL</span>
+                        <span class="metric-value" id="kpiTotal">0</span>
+                        <span class="metric-subtext">Cuentas en plataforma</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-blue">👥</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">ADMINISTRADORES</span>
+                        <span class="metric-value" id="kpiAdmins">0</span>
+                        <span class="metric-subtext">Acceso total del sistema</span>
+                    </div>
+                    <div class="metric-icon-wrap" style="background:#ede9fe; color:#6d28d9;">👑</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">VETERINARIOS</span>
+                        <span class="metric-value" id="kpiVets">0</span>
+                        <span class="metric-subtext">Atenciones y recetas</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-green">🩺</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">RECEPCIONISTAS</span>
+                        <span class="metric-value" id="kpiReceps">0</span>
+                        <span class="metric-subtext">Admisión y citas</span>
+                    </div>
+                    <div class="metric-icon-wrap" style="background:#e0f2fe; color:#0369a1;">📋</div>
+                </div>
+            </section>
+
+            <!-- BARRA UNIFICADA DE FILTROS Y BÚSQUEDA -->
+            <div class="table-search-bar" style="background:white; padding:16px 20px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                <div style="flex:1; min-width:240px; position:relative;">
+                    <input type="text" id="filtroTexto" placeholder="🔍 Buscar por nombre, apellido, username o correo..." 
+                           oninput="aplicarFiltros()"
+                           style="width:100%; padding:10px 14px 10px 38px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; outline:none;">
+                    <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:16px;">🔎</span>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:12px; font-weight:700; color:#64748b; text-transform:uppercase;">Rol:</span>
+                    <select id="filtroRol" onchange="aplicarFiltros()" style="padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; font-weight:600; color:#334155; outline:none; background:#f8fafc;">
+                        <option value="TODOS">Todos los roles</option>
+                        <option value="ADMINISTRADOR">Administrador</option>
+                        <option value="VETERINARIO">Veterinario</option>
+                        <option value="RECEPCIONISTA">Recepcionista</option>
+                    </select>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:12px; font-weight:700; color:#64748b; text-transform:uppercase;">Estado:</span>
+                    <select id="filtroEstado" onchange="aplicarFiltros()" style="padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; font-weight:600; color:#334155; outline:none; background:#f8fafc;">
+                        <option value="TODOS">Todos los estados</option>
+                        <option value="ACTIVO">Activos</option>
+                        <option value="INACTIVO">Inactivos</option>
+                    </select>
+                </div>
+
+                <div style="font-size:13px; font-weight:700; color:#64748b; margin-left:auto;">
+                    Total: <span id="contadorUsuarios" style="color:#0f766e; font-weight:800;">0</span> usuarios
+                </div>
+            </div>
+
+            <!-- TABLA DE USUARIOS -->
+            <div class="table-container" style="background:white; border-radius:12px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">ID</th>
+                            <th>USUARIO / PERSONAL</th>
+                            <th>ROL DE ACCESO</th>
+                            <th>CORREO ELECTRÓNICO</th>
+                            <th>ESTADO</th>
+                            <th style="text-align: right; width: 140px;">ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaUsuariosCuerpo">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px; color: #94a3b8;">
+                                <div class="spinner" style="margin: 0 auto 12px auto;"></div>
+                                Cargando usuarios del sistema...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- CONTROLES DE PAGINACIÓN -->
+            <div class="pagination-footer" id="paginacionUsuarios" style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding:12px 16px; background:white; border-radius:10px; border:1px solid #e2e8f0;">
+                <div style="font-size:13px; color:#64748b;" id="infoPaginacion">
+                    Mostrando 0 de 0 usuarios
+                </div>
+                <div style="display:flex; gap:6px;" id="botonesPaginacion">
+                    <!-- Botones dinámicos -->
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ================= MODAL CREAR / EDITAR USUARIO ================= -->
+    <div class="modal-overlay" id="modalUsuario">
+        <div class="modal-container" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3 id="modalTitulo"><span>👤</span> Nuevo Usuario del Sistema</h3>
+                <button class="btn-close-modal" onclick="cerrarModal()">&times;</button>
+            </div>
+
+            <form id="formUsuario" onsubmit="guardarUsuario(event)">
+                <input type="hidden" id="usuarioId">
+
+                <div class="modal-body">
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="form-group">
+                            <label for="inputUsername">Username (Acceso) *</label>
+                            <input type="text" id="inputUsername" placeholder="Ej: aperez" required 
+                                   style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; outline:none;">
+                            <small id="usernameHelp" style="display:block; color:#64748b; font-size:11px; margin-top:3px;">Solo letras minúsculas y números.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputPassword" id="lblPassword">Contraseña *</label>
+                            <input type="password" id="inputPassword" placeholder="Contraseña de acceso" required
+                                   style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; outline:none;">
+                            <small id="passwordHelp" style="display:block; color:#64748b; font-size:11px; margin-top:3px;">Mínimo 6 caracteres.</small>
+                        </div>
+                    </div>
+
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr; margin-top:12px;">
+                        <div class="form-group">
+                            <label for="inputNombre">Nombres *</label>
+                            <input type="text" id="inputNombre" placeholder="Ej: Carlos" required
+                                   style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; outline:none;">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputApellido">Apellidos *</label>
+                            <input type="text" id="inputApellido" placeholder="Ej: Mendoza" required
+                                   style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; outline:none;">
+                        </div>
+                    </div>
+
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr; margin-top:12px;">
+                        <div class="form-group">
+                            <label for="inputRol">Rol de Permisos (RBAC) *</label>
+                            <select id="inputRol" required style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; outline:none; background:#fff;">
+                                <option value="RECEPCIONISTA">Recepcionista (Admisión y Citas)</option>
+                                <option value="VETERINARIO">Veterinario (Atención y Recetas)</option>
+                                <option value="ADMINISTRADOR">Administrador (Control Total)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputEstado">Estado *</label>
+                            <select id="inputEstado" required style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; outline:none; background:#fff;">
+                                <option value="ACTIVO">ACTIVO (Permite acceso)</option>
+                                <option value="INACTIVO">INACTIVO (Bloqueado)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top:12px;">
+                        <label for="inputCorreo">Correo Institucional</label>
+                        <input type="email" id="inputCorreo" placeholder="usuario@sigevet.com"
+                               style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; outline:none;">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary" id="btnGuardar">Guardar Usuario</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR DE NOTIFICACIONES TOAST -->
+    <div th:replace="~{fragments/layout :: toastContainer}"></div>
+
+    <!-- ================= JAVASCRIPT DINÁMICO ================= -->
+    <script>
+        let usuariosGlobal = [];
+        let usuariosFiltrados = [];
+        let paginaActual = 1;
+        const ITEMS_POR_PAGINA = 8;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            cargarUsuarios();
+            cargarEstadisticas();
+        });
+
+        // Búsqueda global desde topbar
+        function filtrarGlobal(texto) {
+            document.getElementById('filtroTexto').value = texto;
+            aplicarFiltros();
+        }
+
+        async function cargarUsuarios() {
+            try {
+                const resp = await fetch('/api/usuarios');
+                if (resp.status === 403) {
+                    mostrarToast("Acceso restringido a Administradores", "error");
+                    setTimeout(() => window.location.href = '/', 1200);
+                    return;
+                }
+                if (!resp.ok) throw new Error("Error al obtener usuarios");
+
+                usuariosGlobal = await resp.json();
+                aplicarFiltros();
+            } catch (error) {
+                console.error(error);
+                mostrarToast("No se pudo cargar la lista de usuarios", "error");
+                document.getElementById('tablaUsuariosCuerpo').innerHTML = `
+                    <tr><td colspan="6" style="text-align:center; padding:30px; color:#ef4444;">Error al conectar con el servidor.</td></tr>
+                `;
+            }
+        }
+
+        async function cargarEstadisticas() {
+            try {
+                const resp = await fetch('/api/usuarios/estadisticas');
+                if (resp.ok) {
+                    const stats = await resp.json();
+                    document.getElementById('kpiTotal').textContent = stats.total || 0;
+                    document.getElementById('kpiAdmins').textContent = stats.administradores || 0;
+                    document.getElementById('kpiVets').textContent = stats.veterinarios || 0;
+                    document.getElementById('kpiReceps').textContent = stats.recepcionistas || 0;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function aplicarFiltros() {
+            const txt = (document.getElementById('filtroTexto').value || '').trim().toLowerCase();
+            const rol = document.getElementById('filtroRol').value;
+            const estado = document.getElementById('filtroEstado').value;
+
+            usuariosFiltrados = usuariosGlobal.filter(u => {
+                const matchTexto = !txt || 
+                    (u.username && u.username.toLowerCase().includes(txt)) ||
+                    (u.nombre && u.nombre.toLowerCase().includes(txt)) ||
+                    (u.apellido && u.apellido.toLowerCase().includes(txt)) ||
+                    (u.correo && u.correo.toLowerCase().includes(txt)) ||
+                    (u.rol && u.rol.toLowerCase().includes(txt));
+
+                const matchRol = rol === 'TODOS' || (u.rol && u.rol.toUpperCase() === rol);
+                const matchEstado = estado === 'TODOS' || (u.estado && u.estado.toUpperCase() === estado);
+
+                return matchTexto && matchRol && matchEstado;
+            });
+
+            document.getElementById('contadorUsuarios').textContent = usuariosFiltrados.length;
+            paginaActual = 1;
+            renderizarTabla();
+        }
+
+        function renderizarTabla() {
+            const tbody = document.getElementById('tablaUsuariosCuerpo');
+            tbody.innerHTML = '';
+
+            if (usuariosFiltrados.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #94a3b8;">
+                            No se encontraron usuarios registrados con los filtros aplicados.
+                        </td>
+                    </tr>
+                `;
+                document.getElementById('paginacionUsuarios').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('paginacionUsuarios').style.display = 'flex';
+
+            const total = usuariosFiltrados.length;
+            const totalPaginas = Math.ceil(total / ITEMS_POR_PAGINA);
+            if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+
+            const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+            const fin = Math.min(inicio + ITEMS_POR_PAGINA, total);
+            const items = usuariosFiltrados.slice(inicio, fin);
+
+            items.forEach(u => {
+                const tr = document.createElement('tr');
+
+                // Badge de Rol
+                let badgeRolClass = 'badge-role-rec';
+                let iconRol = '📋';
+                if (u.rol === 'ADMINISTRADOR') {
+                    badgeRolClass = 'badge-role-admin';
+                    iconRol = '👑';
+                } else if (u.rol === 'VETERINARIO') {
+                    badgeRolClass = 'badge-role-vet';
+                    iconRol = '🩺';
+                }
+
+                // Badge de Estado
+                const esActivo = (u.estado || 'ACTIVO').toUpperCase() === 'ACTIVO';
+                const estadoBadge = esActivo 
+                    ? `<span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:700; border:1px solid #bbf7d0;">● ACTIVO</span>`
+                    : `<span style="background:#f1f5f9; color:#64748b; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:700; border:1px solid #cbd5e1;">○ INACTIVO</span>`;
+
+                tr.innerHTML = `
+                    <td style="font-weight:700; color:#64748b;">#${u.id}</td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="width:36px; height:36px; border-radius:50%; background:#f1f5f9; display:flex; align-items:center; justify-content:center; font-weight:800; color:#0f766e; font-size:13px; border:1px solid #e2e8f0;">
+                                ${(u.nombre ? u.nombre.charAt(0) : 'U')}${(u.apellido ? u.apellido.charAt(0) : 'S')}
+                            </div>
+                            <div>
+                                <strong style="color:#0f172a; font-size:14px;">${u.nombre || ''} ${u.apellido || ''}</strong>
+                                <div style="font-size:12px; color:#64748b;">@${u.username}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge-role ${badgeRolClass}" style="display:inline-flex; align-items:center; gap:4px; font-size:11px;">
+                            ${iconRol} ${u.rol || 'RECEPCIONISTA'}
+                        </span>
+                    </td>
+                    <td style="color:#334155; font-size:13px;">${u.correo || 'Sin correo registrado'}</td>
+                    <td>${estadoBadge}</td>
+                    <td style="text-align: right;">
+                        <div style="display:flex; justify-content:flex-end; gap:6px;">
+                            <button class="action-btn" title="Editar Usuario" onclick="abrirModalEditar(${u.id})">
+                                ✏️
+                            </button>
+                            <button class="action-btn" title="${esActivo ? 'Desactivar Usuario' : 'Activar Usuario'}" onclick="alternarEstado(${u.id}, '${esActivo ? 'INACTIVO' : 'ACTIVO'}')">
+                                ${esActivo ? '🚫' : '✅'}
+                            </button>
+                        </div>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+
+            // Actualizar footer de paginación
+            document.getElementById('infoPaginacion').textContent = `Mostrando ${inicio + 1} - ${fin} de ${total} usuarios`;
+            renderizarBotonesPaginacion(totalPaginas);
+        }
+
+        function renderizarBotonesPaginacion(totalPaginas) {
+            const container = document.getElementById('botonesPaginacion');
+            container.innerHTML = '';
+
+            const btnPrev = document.createElement('button');
+            btnPrev.textContent = '‹';
+            btnPrev.disabled = paginaActual === 1;
+            btnPrev.style.cssText = `padding: 4px 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: ${paginaActual === 1 ? '#f8fafc' : 'white'}; cursor: ${paginaActual === 1 ? 'not-allowed' : 'pointer'}; font-weight: 700;`;
+            btnPrev.onclick = () => { if (paginaActual > 1) { paginaActual--; renderizarTabla(); } };
+            container.appendChild(btnPrev);
+
+            for (let i = 1; i <= totalPaginas; i++) {
+                const btn = document.createElement('button');
+                btn.textContent = i;
+                const esActiva = i === paginaActual;
+                btn.style.cssText = `padding: 4px 10px; border: 1px solid ${esActiva ? '#0f766e' : '#cbd5e1'}; border-radius: 6px; background: ${esActiva ? '#0f766e' : 'white'}; color: ${esActiva ? 'white' : '#334155'}; cursor: pointer; font-weight: 700;`;
+                btn.onclick = () => { paginaActual = i; renderizarTabla(); };
+                container.appendChild(btn);
+            }
+
+            const btnNext = document.createElement('button');
+            btnNext.textContent = '›';
+            btnNext.disabled = paginaActual === totalPaginas;
+            btnNext.style.cssText = `padding: 4px 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: ${paginaActual === totalPaginas ? '#f8fafc' : 'white'}; cursor: ${paginaActual === totalPaginas ? 'not-allowed' : 'pointer'}; font-weight: 700;`;
+            btnNext.onclick = () => { if (paginaActual < totalPaginas) { paginaActual++; renderizarTabla(); } };
+            container.appendChild(btnNext);
+        }
+
+        function abrirModalCrear() {
+            document.getElementById('formUsuario').reset();
+            document.getElementById('usuarioId').value = '';
+            document.getElementById('modalTitulo').innerHTML = '<span>👤</span> Nuevo Usuario del Sistema';
+            document.getElementById('btnGuardar').textContent = 'Guardar Usuario';
+            
+            const usernameInput = document.getElementById('inputUsername');
+            usernameInput.disabled = false;
+            usernameInput.style.background = '#fff';
+
+            const pwdInput = document.getElementById('inputPassword');
+            pwdInput.required = true;
+            document.getElementById('lblPassword').innerHTML = 'Contraseña *';
+            document.getElementById('passwordHelp').textContent = 'Mínimo 6 caracteres.';
+
+            document.getElementById('modalUsuario').classList.add('active');
+        }
+
+        function abrirModalEditar(id) {
+            const u = usuariosGlobal.find(item => item.id === id);
+            if (!u) return;
+
+            document.getElementById('usuarioId').value = u.id;
+            document.getElementById('inputUsername').value = u.username;
+            document.getElementById('inputUsername').disabled = true;
+            document.getElementById('inputUsername').style.background = '#f1f5f9';
+
+            document.getElementById('inputNombre').value = u.nombre || '';
+            document.getElementById('inputApellido').value = u.apellido || '';
+            document.getElementById('inputRol').value = u.rol || 'RECEPCIONISTA';
+            document.getElementById('inputEstado').value = u.estado || 'ACTIVO';
+            document.getElementById('inputCorreo').value = u.correo || '';
+
+            const pwdInput = document.getElementById('inputPassword');
+            pwdInput.value = '';
+            pwdInput.required = false;
+            document.getElementById('lblPassword').innerHTML = 'Contraseña (Opcional)';
+            document.getElementById('passwordHelp').textContent = 'Dejar vacío si no desea cambiarla.';
+
+            document.getElementById('modalTitulo').innerHTML = '<span>✏️</span> Editar Usuario @' + u.username;
+            document.getElementById('btnGuardar').textContent = 'Actualizar Usuario';
+
+            document.getElementById('modalUsuario').classList.add('active');
+        }
+
+        function cerrarModal() {
+            document.getElementById('modalUsuario').classList.remove('active');
+        }
+
+        async function guardarUsuario(e) {
+            e.preventDefault();
+            const id = document.getElementById('usuarioId').value;
+            const esEdicion = !!id;
+
+            const payload = {
+                nombre: document.getElementById('inputNombre').value.trim(),
+                apellido: document.getElementById('inputApellido').value.trim(),
+                rol: document.getElementById('inputRol').value,
+                estado: document.getElementById('inputEstado').value,
+                correo: document.getElementById('inputCorreo').value.trim()
+            };
+
+            const pwd = document.getElementById('inputPassword').value.trim();
+            if (pwd) {
+                payload.password = pwd;
+            }
+
+            if (!esEdicion) {
+                payload.username = document.getElementById('inputUsername').value.trim();
+            }
+
+            try {
+                const url = esEdicion ? `/api/usuarios/${id}` : '/api/usuarios';
+                const method = esEdicion ? 'PUT' : 'POST';
+
+                const resp = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await resp.json();
+                if (!resp.ok) {
+                    mostrarToast(data.error || "Ocurrió un error al guardar", "error");
+                    return;
+                }
+
+                cerrarModal();
+                mostrarToast(esEdicion ? "Usuario actualizado correctamente" : "Usuario creado con éxito", "success");
+                cargarUsuarios();
+                cargarEstadisticas();
+            } catch (err) {
+                console.error(err);
+                mostrarToast("Error de conexión al guardar usuario", "error");
+            }
+        }
+
+        async function alternarEstado(id, nuevoEstado) {
+            const accion = nuevoEstado === 'ACTIVO' ? 'activar' : 'desactivar';
+            if (!confirm(`¿Está seguro de que desea ${accion} este usuario?`)) return;
+
+            try {
+                const resp = await fetch(`/api/usuarios/${id}/estado`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ estado: nuevoEstado })
+                });
+
+                if (!resp.ok) {
+                    const data = await resp.json();
+                    mostrarToast(data.error || "Error al cambiar estado", "error");
+                    return;
+                }
+
+                mostrarToast(`Usuario ${accion === 'activar' ? 'activado' : 'desactivado'} con éxito`, "success");
+                cargarUsuarios();
+                cargarEstadisticas();
+            } catch (e) {
+                mostrarToast("Error de conexión con el servidor", "error");
+            }
+        }
+    </script>
+</body>
+</html>

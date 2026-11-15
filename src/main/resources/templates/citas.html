@@ -418,7 +418,11 @@
 <div th:replace="~{fragments/layout :: toastContainer}"></div>
 
 <!-- ================= JAVASCRIPT DINÁMICO ================= -->
-<script>
+<script th:inline="javascript">
+    // Control de roles RBAC
+    const rolUsuarioActual = /*[[${usuario != null ? usuario.rol : (session.usuario != null ? session.usuario.rol : '')}]]*/ '';
+    const esClinico = (rolUsuarioActual === 'ADMINISTRADOR' || rolUsuarioActual === 'VETERINARIO');
+
     // Variables de estado
     let citasGlobal = [];
     let fechaAgendaSeleccionada = '';
@@ -669,11 +673,15 @@
                             </div>
 
                             <div style="display:flex; align-items:center; gap:8px;">
-                                ${puedeAtender ? `
+                                ${puedeAtender ? (esClinico ? `
                                     <button class="btn-atender-quick" onclick="abrirModalAtenderCita(${c.id})">
                                         ✓ Atender Consulta
                                     </button>
-                                ` : (estado === 'ATENDIDA' ? `
+                                ` : `
+                                    <span class="meta-tag" style="background:#f1f5f9; color:#64748b; font-size:11px;" title="Atención restringida a Veterinario">
+                                        🩺 Pendiente de Doctor
+                                    </span>
+                                `) : (estado === 'ATENDIDA' ? `
                                     <button type="button" class="btn-atender-quick" style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0;" onclick="verAtencionDesdeCita(${c.id})" title="Ver Ficha y Receta Médica">
                                         📋 Ver Atención / Receta
                                     </button>
@@ -848,11 +856,15 @@
                         ● ${estado}
                     </span>
 
-                    ${puedeAtender ? `
+                    ${puedeAtender ? (esClinico ? `
                         <button class="btn-atender-quick" onclick="abrirModalAtenderCita(${c.id})">
                             ✓ Atender Consulta
                         </button>
-                    ` : (estado === 'ATENDIDA' ? `
+                    ` : `
+                        <span class="meta-tag" style="background:#f1f5f9; color:#64748b; font-size:11px;" title="Atención restringida a Veterinario">
+                            🩺 Pendiente de Doctor
+                        </span>
+                    `) : (estado === 'ATENDIDA' ? `
                         <button type="button" class="btn-atender-quick" style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0;" onclick="verAtencionDesdeCita(${c.id})" title="Ver Ficha y Receta Médica">
                             📋 Ver Atención / Receta
                         </button>
@@ -991,6 +1003,11 @@
     }
 
     function abrirModalAtenderCita(id) {
+        if (!esClinico) {
+            mostrarToast("Acceso denegado: Solo el personal veterinario o administrador puede atender consultas.", "error");
+            return;
+        }
+
         const c = citasGlobal.find(item => item.id === id);
         if (!c) return;
 

@@ -20,7 +20,8 @@ public class DataInitializer {
                                      VacunaRepository vacunaRepository,
                                      AlergiaRepository alergiaRepository) {
         return args -> {
-            // Usuarios con BCrypt
+            // Usuarios con BCrypt y Roles RBAC
+            crearOActualizarUsuario(usuarioRepository, passwordEncoder, "admin", "123456", "Administrador", "General", "ADMINISTRADOR", "admin@sigevet.com");
             crearOActualizarUsuario(usuarioRepository, passwordEncoder, "jlopez", "123456", "Juan", "Lopez", "VETERINARIO", "jlopez@sigevet.com");
             crearOActualizarUsuario(usuarioRepository, passwordEncoder, "mgarcia", "123456", "Maria", "Garcia", "VETERINARIO", "mgarcia@sigevet.com");
             crearOActualizarUsuario(usuarioRepository, passwordEncoder, "aperez", "123456", "Ana", "Perez", "RECEPCIONISTA", "aperez@sigevet.com");
@@ -63,6 +64,10 @@ public class DataInitializer {
             repo.save(usuario);
         } else {
             usuario.setPassword(encoder.encode(passwordPlana));
+            usuario.setRol(rol);
+            if (usuario.getEstado() == null || usuario.getEstado().isBlank()) {
+                usuario.setEstado("ACTIVO");
+            }
             repo.save(usuario);
         }
     }

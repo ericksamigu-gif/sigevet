@@ -55,7 +55,7 @@
         </svg>
         Nueva Cita
     </button>
-    <button th:if="${activeItem == 'historial'}" class="btn-action-primary" onclick="abrirModalCrear()">
+    <button th:if="${activeItem == 'historial' and ((usuario != null and usuario.rol != 'RECEPCIONISTA') or (session.usuario != null and session.usuario.rol != 'RECEPCIONISTA'))}" class="btn-action-primary" onclick="abrirModalCrear()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -125,6 +125,17 @@
                 Historial
             </a>
         </li>
+        <li th:if="${(usuario != null and usuario.rol == 'ADMINISTRADOR') or (session.usuario != null and session.usuario.rol == 'ADMINISTRADOR')}">
+            <a href="/usuarios" class="nav-link" th:classappend="${activeItem == 'usuarios' ? 'active' : ''}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M12 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"></path>
+                    <path d="M4 20v-1a7 7 0 0 1 14 0v1"></path>
+                    <path d="M18 8a3 3 0 1 0 0 6"></path>
+                    <path d="M22 20v-1a5 5 0 0 0-4-4.8"></path>
+                </svg>
+                Usuarios
+            </a>
+        </li>
     </ul>
 
     <!-- Pie de Barra Lateral -->
@@ -171,8 +182,14 @@
             <div class="user-info">
                 <div class="user-name" th:if="${usuario != null}" th:text="${usuario.nombre + ' ' + usuario.apellido}">Usuario</div>
                 <div class="user-name" th:if="${usuario == null}">Usuario Invitado</div>
-                <div class="user-role" th:if="${usuario != null}" th:text="${usuario.rol}">Personal</div>
-                <div class="user-role" th:if="${usuario == null}">Invitado</div>
+                <div class="user-role" th:if="${usuario != null}">
+                    <span class="badge-role" 
+                          th:classappend="${usuario.rol == 'ADMINISTRADOR' ? 'badge-role-admin' : (usuario.rol == 'VETERINARIO' ? 'badge-role-vet' : 'badge-role-rec')}"
+                          th:text="${usuario.rol}">Personal</span>
+                </div>
+                <div class="user-role" th:if="${usuario == null}">
+                    <span class="badge-role badge-role-rec">Invitado</span>
+                </div>
             </div>
         </div>
     </div>

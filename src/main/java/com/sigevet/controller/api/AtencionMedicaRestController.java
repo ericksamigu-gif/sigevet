@@ -9,6 +9,8 @@ import com.sigevet.repository.AtencionMedicaRepository;
 import com.sigevet.repository.CitaRepository;
 import com.sigevet.repository.MascotaRepository;
 import com.sigevet.repository.UsuarioRepository;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,6 +37,35 @@ public class AtencionMedicaRestController {
         this.citaRepository = citaRepository;
         this.mascotaRepository = mascotaRepository;
         this.usuarioRepository = usuarioRepository;
+    }
+
+    /**
+     * Valida si el usuario en sesión tiene perfil clínico (VETERINARIO o ADMINISTRADOR)
+     */
+    private boolean esPersonalClinico(HttpServletRequest request) {
+        if (request == null) return false;
+        Usuario u = (Usuario) request.getAttribute("usuario");
+        if (u == null) {
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                u = (Usuario) session.getAttribute("usuario");
+            }
+        }
+        if (u == null) return false;
+        String rol = u.getRol();
+        return "ADMINISTRADOR".equalsIgnoreCase(rol) || "VETERINARIO".equalsIgnoreCase(rol);
+    }
+
+    private Usuario obtenerUsuarioActual(HttpServletRequest request) {
+        if (request == null) return null;
+        Usuario u = (Usuario) request.getAttribute("usuario");
+        if (u == null) {
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                u = (Usuario) session.getAttribute("usuario");
+            }
+        }
+        return u;
     }
 
     /**
@@ -154,7 +185,12 @@ public class AtencionMedicaRestController {
      * Registrar una nueva atención médica
      */
     @PostMapping
-    public ResponseEntity<?> registrarAtencion(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> registrarAtencion(@RequestBody Map<String, Object> payload, HttpServletRequest request) {
+        if (!esPersonalClinico(request)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Acceso denegado: Se requiere rol VETERINARIO o ADMINISTRADOR para registrar atenciones médicas."));
+        }
+
         try {
             Integer mascotaId = payload.get("mascotaId") != null ? Integer.valueOf(payload.get("mascotaId").toString()) : null;
             Integer citaId = payload.get("citaId") != null && !payload.get("citaId").toString().isEmpty()
@@ -210,6 +246,11 @@ public class AtencionMedicaRestController {
                 veterinario = usuarioRepository.findById(veterinarioId).orElse(null);
             } else if (cita != null && cita.getVeterinario() != null) {
                 veterinario = cita.getVeterinario();
+            } else {
+                Usuario userActual = obtenerUsuarioActual(request);
+                if (userActual != null && "VETERINARIO".equalsIgnoreCase(userActual.getRol())) {
+                    veterinario = userActual;
+                }
             }
 
             // Si la cita aún no existe (consulta directa/walk-in), se genera una cita ATENDIDA para cumplir FK de base de datos
@@ -248,7 +289,12 @@ public class AtencionMedicaRestController {
      * Actualizar una atención médica existente
      */
     @PutMapping("/{id}")
-    public ResponseEntity<?> actualizarAtencion(@PathVariable Integer id, @RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> actualizarAtencion(@PathVariable Integer id, @RequestBody Map<String, Object> payload, HttpServletRequest request) {
+        if (!esPersonalClinico(request)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Acceso denegado: Se requiere rol VETERINARIO o ADMINISTRADOR para modificar atenciones médicas."));
+        }
+
         Optional<AtencionMedica> atencionOpt = atencionMedicaRepository.findById(id);
         if (atencionOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -289,7 +335,12 @@ public class AtencionMedicaRestController {
      * Eliminar una atención médica
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminarAtencion(@PathVariable Integer id) {
+    public ResponseEntity<?> eliminarAtencion(@PathVariable Integer id, HttpServletRequest request) {
+        if (!esPersonalClinico(request)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Acceso denegado: Se requiere rol VETERINARIO o ADMINISTRADOR para eliminar atenciones médicas."));
+        }
+
         Optional<AtencionMedica> atencionOpt = atencionMedicaRepository.findById(id);
         if (atencionOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

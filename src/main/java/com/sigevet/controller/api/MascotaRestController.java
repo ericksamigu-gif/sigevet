@@ -4,6 +4,8 @@ import com.sigevet.dto.AtencionMedicaDTO;
 import com.sigevet.dto.MascotaDTO;
 import com.sigevet.entity.*;
 import com.sigevet.repository.*;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -41,6 +43,20 @@ public class MascotaRestController {
         this.vacunaAplicadaRepository = vacunaAplicadaRepository;
         this.alergiaRepository = alergiaRepository;
         this.mascotaAlergiaRepository = mascotaAlergiaRepository;
+    }
+
+    private boolean esPersonalClinico(HttpServletRequest request) {
+        if (request == null) return false;
+        Usuario u = (Usuario) request.getAttribute("usuario");
+        if (u == null) {
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                u = (Usuario) session.getAttribute("usuario");
+            }
+        }
+        if (u == null) return false;
+        String rol = u.getRol();
+        return "ADMINISTRADOR".equalsIgnoreCase(rol) || "VETERINARIO".equalsIgnoreCase(rol);
     }
 
     /**
@@ -219,7 +235,12 @@ public class MascotaRestController {
      * Registrar una vacuna aplicada a la mascota en su carnet
      */
     @PostMapping("/{id}/vacunas")
-    public ResponseEntity<?> registrarVacunaMascota(@PathVariable Integer id, @RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> registrarVacunaMascota(@PathVariable Integer id, @RequestBody Map<String, Object> payload, HttpServletRequest request) {
+        if (!esPersonalClinico(request)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Acceso denegado: Se requiere rol VETERINARIO o ADMINISTRADOR para registrar vacunas en el carnet."));
+        }
+
         Optional<Mascota> mascOpt = mascotaRepository.findById(id);
         if (mascOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Mascota no encontrada"));
@@ -298,7 +319,12 @@ public class MascotaRestController {
      * Registrar una alergia a la mascota
      */
     @PostMapping("/{id}/alergias")
-    public ResponseEntity<?> registrarAlergiaMascota(@PathVariable Integer id, @RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> registrarAlergiaMascota(@PathVariable Integer id, @RequestBody Map<String, Object> payload, HttpServletRequest request) {
+        if (!esPersonalClinico(request)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Acceso denegado: Se requiere rol VETERINARIO o ADMINISTRADOR para registrar alergias en el expediente."));
+        }
+
         Optional<Mascota> mascOpt = mascotaRepository.findById(id);
         if (mascOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Mascota no encontrada"));

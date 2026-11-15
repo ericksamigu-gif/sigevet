@@ -55,7 +55,14 @@
         </svg>
         Nueva Cita
     </button>
-    <a th:if="${activeItem != 'clientes' and activeItem != 'mascotas' and activeItem != 'citas'}" href="/citas" class="btn-action-primary">
+    <button th:if="${activeItem == 'historial'}" class="btn-action-primary" onclick="abrirModalCrear()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Nueva Atención
+    </button>
+    <a th:if="${activeItem != 'clientes' and activeItem != 'mascotas' and activeItem != 'citas' and activeItem != 'historial'}" href="/citas" class="btn-action-primary">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>

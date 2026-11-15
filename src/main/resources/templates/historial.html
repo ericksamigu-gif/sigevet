@@ -14,42 +14,114 @@
     <div class="main-wrapper">
 
         <!-- BARRA SUPERIOR -->
-        <header th:replace="~{fragments/layout :: topbar('Buscar en historial médico...')}"></header>
+        <header th:replace="~{fragments/layout :: topbar('Buscar por paciente, propietario, diagnóstico o veterinario...')}"></header>
 
         <!-- CUERPO DE LA PÁGINA -->
         <main class="content-body">
 
+            <!-- TÍTULO Y ACCIONES -->
             <div class="page-header-row">
                 <div class="page-title-group">
-                    <h1>Historial Médico y Consultas</h1>
-                    <p style="color:#64748b; font-size:14px; margin-top:4px;">Registro de atenciones, diagnósticos, tratamientos y recetas de los pacientes.</p>
+                    <h1>
+                        Historial Médico y Consultas
+                        <span class="badge-live">Expedientes Clínicos</span>
+                    </h1>
+                    <p>Registro de atenciones, diagnósticos veterinarios, prescripciones y tratamientos.</p>
+                </div>
+
+                <div class="header-actions">
+                    <button class="btn-secondary" onclick="recargarAtenciones()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6"></path>
+                            <path d="M1 20v-6h6"></path>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        Refrescar
+                    </button>
+
+                    <button class="btn-primary" onclick="abrirModalCrear()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Nueva Atención
+                    </button>
                 </div>
             </div>
 
+            <!-- TARJETAS MÉTRICAS (KPIS) -->
+            <section class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">TOTAL ATENCIONES</span>
+                        <span class="metric-value" id="kpiTotalAtenciones">0</span>
+                        <span class="metric-subtext">Consultas registradas</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-green">🩺</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">CONSULTAS HOY</span>
+                        <span class="metric-value" id="kpiAtencionesHoy">0</span>
+                        <span class="metric-subtext">Atendidas en la fecha</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-blue">📅</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">PACIENTES ÚNICOS</span>
+                        <span class="metric-value" id="kpiTotalPacientes">0</span>
+                        <span class="metric-subtext">Mascotas tratadas</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-purple">🐾</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">CON TRATAMIENTOS</span>
+                        <span class="metric-value" id="kpiConTratamiento">0</span>
+                        <span class="metric-subtext">Prescripciones activas</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-red">💊</div>
+                </div>
+            </section>
+
+            <!-- TABLA DE HISTORIAL CLÍNICO -->
             <div class="data-card">
+                <div class="data-header">
+                    <div class="filter-input-wrap">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="filtroTabla" placeholder="Buscar por paciente, propietario, diagnóstico o veterinario..." oninput="filtrarTabla(this.value)">
+                    </div>
+
+                    <div class="data-stats-text" id="statsContador">
+                        Cargando historial médico...
+                    </div>
+                </div>
+
                 <div class="table-responsive">
                     <table>
                         <thead>
                             <tr>
-                                <th>ID</th>
                                 <th>FECHA</th>
+                                <th>PACIENTE</th>
+                                <th>VETERINARIO</th>
                                 <th>DIAGNÓSTICO</th>
-                                <th>TRATAMIENTO</th>
-                                <th>VACUNAS</th>
-                                <th>ALERGIAS</th>
+                                <th>TRATAMIENTO / RECETA</th>
+                                <th>VACUNAS / ALERGIAS</th>
+                                <th style="text-align: right;">ACCIONES</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr th:each="atencion : ${atenciones}">
-                                <td th:text="${atencion.id}"></td>
-                                <td th:text="${atencion.fecha}"></td>
-                                <td><strong th:text="${atencion.diagnostico}"></strong></td>
-                                <td th:text="${atencion.tratamiento}"></td>
-                                <td th:text="${atencion.vacunas}"></td>
-                                <td th:text="${atencion.alergias}"></td>
-                            </tr>
-                            <tr th:if="${#lists.isEmpty(atenciones)}">
-                                <td colspan="6" style="text-align:center; padding:30px; color:#94a3b8;">No hay registros de atenciones médicas registradas</td>
+                        <tbody id="tablaAtencionesBody">
+                            <tr>
+                                <td colspan="7" class="empty-state">
+                                    Cargando atenciones desde el servidor...
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -57,10 +129,607 @@
             </div>
 
         </main>
-
     </div>
 
 </div>
+
+<!-- ================= MODAL REGISTRAR / EDITAR ATENCIÓN ================= -->
+<div class="modal-overlay" id="modalAtencion">
+    <div class="modal-container" style="max-width: 680px;">
+        <div class="modal-header">
+            <h3 id="modalTitulo">
+                <span>🩺</span> Registrar Nueva Atención Médica
+            </h3>
+            <button class="btn-close-modal" onclick="cerrarModalAtencion()">&times;</button>
+        </div>
+
+        <form id="formAtencion" onsubmit="guardarAtencion(event)">
+            <input type="hidden" id="atencionId">
+
+            <div class="modal-body">
+                <!-- VINCULAR A CITA (OPCIONAL O DIRECTA) -->
+                <div class="form-group">
+                    <label for="selectCitaId">Vincular a Cita Agendada (Opcional)</label>
+                    <select id="selectCitaId" onchange="alSeleccionarCita(this.value)">
+                        <option value="">-- Consulta Médica Directa (Sin cita previa) --</option>
+                    </select>
+                    <small style="color:#64748b; font-size:12px; margin-top:3px; display:block;">
+                        Si selecciona una cita agendada, el paciente y veterinario se autocompletarán y la cita pasará a <strong>ATENDIDA</strong>.
+                    </small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="selectMascotaId">Paciente (Mascota) *</label>
+                        <select id="selectMascotaId" required>
+                            <option value="" disabled selected>Seleccione el paciente...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="selectVeterinarioId">Veterinario a Cargo *</label>
+                        <select id="selectVeterinarioId" required>
+                            <option value="" disabled selected>Seleccione el médico veterinario...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="inputFecha">Fecha de Atención *</label>
+                    <input type="date" id="inputFecha" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="inputDiagnostico">Diagnóstico Clínico *</label>
+                    <textarea id="inputDiagnostico" rows="3" placeholder="Describa el diagnóstico médico, síntomas observados, constantes vitales..." required style="width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; outline:none; resize:vertical;"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="inputTratamiento">Tratamiento, Prescripción y Posología *</label>
+                    <textarea id="inputTratamiento" rows="3" placeholder="Medicamentos, dosis (mg/ml), frecuencia, duración e indicaciones para el propietario..." required style="width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; outline:none; resize:vertical;"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="inputVacunas">Vacunas Administradas</label>
+                        <input type="text" id="inputVacunas" placeholder="Ej: Antirrábica, Séxtuple, Ninguna">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputAlergias">Alergias Detectadas / Observadas</label>
+                        <input type="text" id="inputAlergias" placeholder="Ej: Penicilina, Ninguna conocida">
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="cerrarModalAtencion()">Cancelar</button>
+                <button type="submit" class="btn-primary" id="btnGuardar">Guardar Atención</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ================= MODAL FICHA CLÍNICA / RECETA IMPRIMIBLE ================= -->
+<div class="modal-overlay" id="modalFicha">
+    <div class="modal-container" style="max-width: 650px;">
+        <div class="modal-header">
+            <h3><span>📋</span> Ficha de Atención y Receta Médica</h3>
+            <button class="btn-close-modal" onclick="cerrarModalFicha()">&times;</button>
+        </div>
+
+        <div class="modal-body" id="imprimibleFichaArea" style="background:#ffffff; color:#0f172a; padding:24px;">
+            <!-- ENCABEZADO DE LA CLÍNICA -->
+            <div style="border-bottom:2px solid #0f766e; padding-bottom:14px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:flex-start;">
+                <div>
+                    <h2 style="color:#0f766e; font-size:22px; font-weight:800; margin:0;">🐾 SIGEVET</h2>
+                    <p style="color:#64748b; font-size:12px; margin:2px 0 0 0;">Clínica Veterinaria & Centro de Atención Integral</p>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:13px; font-weight:700; color:#0f172a;" id="fichaNumero">ATENCIÓN #--</div>
+                    <div style="font-size:12px; color:#64748b;" id="fichaFecha">Fecha: --/--/----</div>
+                </div>
+            </div>
+
+            <!-- DATOS DEL PACIENTE Y PROPIETARIO -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px 18px; margin-bottom:18px; display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px;">
+                <div>
+                    <span style="color:#64748b; display:block; font-size:11px; font-weight:700; text-transform:uppercase;">Paciente:</span>
+                    <strong style="font-size:15px; color:#0f172a;" id="fichaPaciente">--</strong>
+                    <div style="color:#475569;" id="fichaEspecieRaza">--</div>
+                </div>
+                <div>
+                    <span style="color:#64748b; display:block; font-size:11px; font-weight:700; text-transform:uppercase;">Propietario:</span>
+                    <strong style="font-size:15px; color:#0f172a;" id="fichaPropietario">--</strong>
+                    <div style="color:#475569;" id="fichaTelefono">Tel: --</div>
+                </div>
+            </div>
+
+            <!-- DIAGNÓSTICO -->
+            <div style="margin-bottom:16px;">
+                <h4 style="font-size:13px; font-weight:800; color:#0f766e; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">
+                    🩺 Diagnóstico Clínico:
+                </h4>
+                <div style="background:#ffffff; border-left:4px solid #0f766e; padding:10px 14px; font-size:14px; color:#1e293b; background:#f8fafc; border-radius:0 8px 8px 0;" id="fichaDiagnostico">
+                    --
+                </div>
+            </div>
+
+            <!-- TRATAMIENTO Y RECETA -->
+            <div style="margin-bottom:16px;">
+                <h4 style="font-size:13px; font-weight:800; color:#0f766e; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">
+                    💊 Tratamiento y Prescripción Médica:
+                </h4>
+                <div style="background:#ffffff; border-left:4px solid #2563eb; padding:10px 14px; font-size:14px; color:#1e293b; background:#eff6ff; border-radius:0 8px 8px 0; white-space:pre-line;" id="fichaTratamiento">
+                    --
+                </div>
+            </div>
+
+            <!-- VACUNAS Y ALERGIAS -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px; font-size:13px;">
+                <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 14px;">
+                    <strong style="color:#166534; display:block; font-size:12px; margin-bottom:2px;">💉 Vacunas aplicadas:</strong>
+                    <span style="color:#14532d;" id="fichaVacunas">Ninguna</span>
+                </div>
+                <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:10px 14px;">
+                    <strong style="color:#991b1b; display:block; font-size:12px; margin-bottom:2px;">⚠️ Alergias advertidas:</strong>
+                    <span style="color:#7f1d1d;" id="fichaAlergias">Ninguna conocida</span>
+                </div>
+            </div>
+
+            <!-- FIRMA DEL VETERINARIO -->
+            <div style="margin-top:30px; padding-top:16px; border-top:1px dashed #cbd5e1; display:flex; justify-content:space-between; align-items:flex-end;">
+                <div>
+                    <small style="color:#94a3b8; font-size:11px;">SIGEVET Cloud • Documento clínico oficial emitido por la clínica.</small>
+                </div>
+                <div style="text-align:center; min-width:200px;">
+                    <div style="border-bottom:1px solid #0f172a; width:100%; margin-bottom:4px;"></div>
+                    <strong style="font-size:13px; color:#0f172a; display:block;" id="fichaVeterinario">Dr. --</strong>
+                    <span style="font-size:11px; color:#64748b;">Médico Veterinario</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="cerrarModalFicha()">Cerrar</button>
+            <button type="button" class="btn-primary" onclick="imprimirFicha()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                Imprimir Receta / Ficha
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- CONTENEDOR TOAST -->
+<div th:replace="~{fragments/layout :: toastContainer}"></div>
+
+<!-- ================= JAVASCRIPT DINÁMICO (PATRÓN MVC REST) ================= -->
+<script>
+    let atencionesGlobal = [];
+    let mascotasLista = [];
+    let veterinariosLista = [];
+    let citasLista = [];
+
+    document.addEventListener("DOMContentLoaded", () => {
+        cargarAtenciones();
+        cargarEstadisticas();
+        cargarComboMascotas();
+        cargarComboVeterinarios();
+        cargarComboCitas();
+
+        // Fecha de hoy por defecto
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('inputFecha').value = hoy;
+    });
+
+    /**
+     * Consume GET /api/atenciones
+     */
+    async function cargarAtenciones(filtro = "") {
+        try {
+            const url = filtro ? `/api/atenciones?buscar=${encodeURIComponent(filtro)}` : '/api/atenciones';
+            const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+
+            if (response.status === 401) {
+                window.location.href = '/login?auth=required';
+                return;
+            }
+
+            atencionesGlobal = await response.json();
+            renderizarTabla(atencionesGlobal);
+        } catch (error) {
+            console.error("Error al cargar atenciones:", error);
+            mostrarToast("Error al cargar historial médico", "error");
+        }
+    }
+
+    /**
+     * Consume GET /api/atenciones/estadisticas
+     */
+    async function cargarEstadisticas() {
+        try {
+            const resp = await fetch('/api/atenciones/estadisticas');
+            if (resp.ok) {
+                const s = await resp.json();
+                document.getElementById('kpiTotalAtenciones').textContent = s.totalAtenciones || 0;
+                document.getElementById('kpiAtencionesHoy').textContent = s.atencionesHoy || 0;
+                document.getElementById('kpiTotalPacientes').textContent = s.totalPacientes || 0;
+                document.getElementById('kpiConTratamiento').textContent = s.conTratamiento || 0;
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    /**
+     * Cargar listas auxiliares para los combos
+     */
+    async function cargarComboMascotas() {
+        try {
+            const resp = await fetch('/api/mascotas');
+            if (resp.ok) {
+                mascotasLista = await resp.json();
+                const sel = document.getElementById('selectMascotaId');
+                sel.innerHTML = '<option value="" disabled selected>Seleccione el paciente...</option>';
+                mascotasLista.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = `${m.nombre} (${m.especie || 'Mascota'} - Dueño: ${m.clienteNombre})`;
+                    sel.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function cargarComboVeterinarios() {
+        try {
+            const resp = await fetch('/api/citas/veterinarios');
+            if (resp.ok) {
+                veterinariosLista = await resp.json();
+                const sel = document.getElementById('selectVeterinarioId');
+                sel.innerHTML = '<option value="" disabled selected>Seleccione el médico veterinario...</option>';
+                veterinariosLista.forEach(v => {
+                    const opt = document.createElement('option');
+                    opt.value = v.id;
+                    opt.textContent = `Dr. ${v.nombre}`;
+                    sel.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function cargarComboCitas() {
+        try {
+            const resp = await fetch('/api/atenciones/citas-disponibles');
+            if (resp.ok) {
+                citasLista = await resp.json();
+                const sel = document.getElementById('selectCitaId');
+                sel.innerHTML = '<option value="">-- Consulta Médica Directa (Sin cita previa) --</option>';
+                citasLista.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = `Cita #${c.id} - ${c.fecha} (${c.hora || ''}) | Paciente: ${c.mascotaNombre} | Motivo: ${c.motivo} [${c.estado}]`;
+                    sel.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    /**
+     * Al seleccionar una cita, autocompletar mascota y veterinario
+     */
+    function alSeleccionarCita(citaId) {
+        if (!citaId) return;
+        const cita = citasLista.find(c => c.id == citaId);
+        if (cita) {
+            if (cita.mascotaId) {
+                document.getElementById('selectMascotaId').value = cita.mascotaId;
+            }
+            if (cita.veterinarioId) {
+                document.getElementById('selectVeterinarioId').value = cita.veterinarioId;
+            }
+            if (cita.motivo && !document.getElementById('inputDiagnostico').value) {
+                document.getElementById('inputDiagnostico').value = `Motivo de ingreso: ${cita.motivo}. `;
+            }
+        }
+    }
+
+    /**
+     * Renderizar la tabla de atenciones
+     */
+    function renderizarTabla(lista) {
+        const tbody = document.getElementById('tablaAtencionesBody');
+        const stats = document.getElementById('statsContador');
+        tbody.innerHTML = '';
+
+        stats.textContent = `Mostrando ${lista.length} de ${atencionesGlobal.length} atenciones registradas`;
+
+        if (lista.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="8" y1="12" x2="16" y2="12"></line>
+                        </svg>
+                        <p>No se encontraron registros de atenciones médicas con los criterios especificados.</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        lista.forEach(a => {
+            const tr = document.createElement('tr');
+            const espLower = (a.mascotaEspecie || '').toLowerCase();
+            let petIcon = '🐾';
+            if (espLower.includes('perro') || espLower.includes('canino')) petIcon = '🐶';
+            else if (espLower.includes('gato') || espLower.includes('felino')) petIcon = '🐱';
+
+            tr.innerHTML = `
+                <td style="white-space: nowrap;">
+                    <strong style="color:#0f172a; display:block;">${a.fecha || 'N/D'}</strong>
+                    <small style="color:#94a3b8;">#${a.id} ${a.citaId ? `(Cita #${a.citaId})` : ''}</small>
+                </td>
+                <td>
+                    <div class="client-avatar-cell">
+                        <div class="client-avatar">${petIcon}</div>
+                        <div>
+                            <div class="client-name-bold">${a.mascotaNombre}</div>
+                            <small style="color:#64748b">${a.mascotaEspecie} ${a.mascotaRaza ? '• ' + a.mascotaRaza : ''} | Dueño: <strong>${a.clienteNombre}</strong></small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span style="font-weight:600; color:#334155;">${a.veterinarioNombre}</span>
+                </td>
+                <td>
+                    <div style="font-weight:700; color:#0f172a; max-width:240px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${a.diagnostico}">
+                        ${a.diagnostico}
+                    </div>
+                </td>
+                <td>
+                    <div style="color:#475569; font-size:13px; max-width:250px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${a.tratamiento}">
+                        ${a.tratamiento}
+                    </div>
+                </td>
+                <td>
+                    <div style="font-size:12px;">
+                        <span style="display:block; color:#059669;">💉 ${a.vacunas || 'Ninguna'}</span>
+                        <span style="display:block; color:#dc2626;">⚠️ ${a.alergias || 'Ninguna'}</span>
+                    </div>
+                </td>
+                <td style="text-align: right;">
+                    <div class="action-buttons" style="justify-content: flex-end; gap:6px;">
+                        <button class="btn-table-action" title="Ver Ficha y Receta Médica" onclick="verFichaMedica(${a.id})" style="background:#ecfdf5; color:#059669; border-color:#a7f3d0;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                            </svg>
+                        </button>
+                        <button class="btn-table-action" title="Editar Atención" onclick="abrirModalEditar(${a.id})">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        <button class="btn-table-action delete" title="Eliminar Atención" onclick="confirmarEliminar(${a.id})">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function filtrarTabla(query) {
+        const q = (query || '').toLowerCase().trim();
+        if (!q) {
+            renderizarTabla(atencionesGlobal);
+            return;
+        }
+
+        const filtradas = atencionesGlobal.filter(a =>
+            (a.mascotaNombre && a.mascotaNombre.toLowerCase().includes(q)) ||
+            (a.clienteNombre && a.clienteNombre.toLowerCase().includes(q)) ||
+            (a.diagnostico && a.diagnostico.toLowerCase().includes(q)) ||
+            (a.tratamiento && a.tratamiento.toLowerCase().includes(q)) ||
+            (a.veterinarioNombre && a.veterinarioNombre.toLowerCase().includes(q))
+        );
+
+        renderizarTabla(filtradas);
+    }
+
+    function filtrarGlobal(query) {
+        document.getElementById('filtroTabla').value = query;
+        filtrarTabla(query);
+    }
+
+    function recargarAtenciones() {
+        document.getElementById('filtroTabla').value = '';
+        document.getElementById('globalSearch').value = '';
+        cargarAtenciones();
+        cargarEstadisticas();
+        cargarComboCitas();
+        mostrarToast("Historial médico actualizado", "success");
+    }
+
+    function abrirModalCrear() {
+        document.getElementById('formAtencion').reset();
+        document.getElementById('atencionId').value = '';
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('inputFecha').value = hoy;
+        document.getElementById('modalTitulo').innerHTML = '<span>🩺</span> Registrar Nueva Atención Médica';
+        document.getElementById('btnGuardar').textContent = 'Guardar Atención';
+        document.getElementById('modalAtencion').classList.add('active');
+    }
+
+    async function abrirModalEditar(id) {
+        try {
+            const resp = await fetch(`/api/atenciones/${id}`);
+            if (!resp.ok) throw new Error("No se pudo obtener la atención");
+            const a = await resp.json();
+
+            document.getElementById('atencionId').value = a.id;
+            document.getElementById('selectMascotaId').value = a.mascotaId || '';
+            document.getElementById('selectVeterinarioId').value = a.veterinarioId || '';
+            document.getElementById('selectCitaId').value = a.citaId || '';
+            document.getElementById('inputFecha').value = a.fecha || '';
+            document.getElementById('inputDiagnostico').value = a.diagnostico || '';
+            document.getElementById('inputTratamiento').value = a.tratamiento || '';
+            document.getElementById('inputVacunas').value = a.vacunas || '';
+            document.getElementById('inputAlergias').value = a.alergias || '';
+
+            document.getElementById('modalTitulo').innerHTML = '<span>✏️</span> Editar Atención Médica';
+            document.getElementById('btnGuardar').textContent = 'Actualizar Cambios';
+            document.getElementById('modalAtencion').classList.add('active');
+        } catch (e) {
+            mostrarToast("Error al cargar la atención médica", "error");
+        }
+    }
+
+    function cerrarModalAtencion() {
+        document.getElementById('modalAtencion').classList.remove('active');
+    }
+
+    async function guardarAtencion(e) {
+        e.preventDefault();
+
+        const id = document.getElementById('atencionId').value;
+        const payload = {
+            citaId: document.getElementById('selectCitaId').value || null,
+            mascotaId: document.getElementById('selectMascotaId').value,
+            veterinarioId: document.getElementById('selectVeterinarioId').value || null,
+            fecha: document.getElementById('inputFecha').value,
+            diagnostico: document.getElementById('inputDiagnostico').value.trim(),
+            tratamiento: document.getElementById('inputTratamiento').value.trim(),
+            vacunas: document.getElementById('inputVacunas').value.trim(),
+            alergias: document.getElementById('inputAlergias').value.trim()
+        };
+
+        const esEdicion = !!id;
+        const url = esEdicion ? `/api/atenciones/${id}` : '/api/atenciones';
+        const method = esEdicion ? 'PUT' : 'POST';
+
+        try {
+            const resp = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await resp.json();
+            if (!resp.ok) {
+                mostrarToast(data.error || "Ocurrió un error al guardar", "error");
+                return;
+            }
+
+            cerrarModalAtencion();
+            mostrarToast(esEdicion ? "Atención actualizada con éxito" : "Atención médica registrada con éxito", "success");
+            cargarAtenciones();
+            cargarEstadisticas();
+            cargarComboCitas();
+        } catch (error) {
+            mostrarToast("Error de conexión con el servidor", "error");
+        }
+    }
+
+    async function confirmarEliminar(id) {
+        if (!confirm("¿Está seguro de eliminar este registro del historial médico?")) return;
+
+        try {
+            const resp = await fetch(`/api/atenciones/${id}`, { method: 'DELETE' });
+            if (resp.ok) {
+                mostrarToast("Atención médica eliminada correctamente", "success");
+                cargarAtenciones();
+                cargarEstadisticas();
+            }
+        } catch (e) {
+            mostrarToast("Error de conexión", "error");
+        }
+    }
+
+    /**
+     * Ver Ficha Médica y Receta Clínica
+     */
+    async function verFichaMedica(id) {
+        try {
+            const resp = await fetch(`/api/atenciones/${id}`);
+            if (!resp.ok) throw new Error("Error al obtener la ficha médica");
+            const a = await resp.json();
+
+            document.getElementById('fichaNumero').textContent = `ATENCIÓN #${a.id}`;
+            document.getElementById('fichaFecha').textContent = `Fecha: ${a.fecha || 'N/D'}`;
+            document.getElementById('fichaPaciente').textContent = a.mascotaNombre;
+            document.getElementById('fichaEspecieRaza').textContent = `${a.mascotaEspecie} • ${a.mascotaRaza || 'Mestizo'}`;
+            document.getElementById('fichaPropietario').textContent = a.clienteNombre;
+            document.getElementById('fichaTelefono').textContent = `Tel: ${a.clienteTelefono || 'Sin teléfono'}`;
+            document.getElementById('fichaDiagnostico').textContent = a.diagnostico;
+            document.getElementById('fichaTratamiento').textContent = a.tratamiento;
+            document.getElementById('fichaVacunas').textContent = a.vacunas || 'Ninguna registrada';
+            document.getElementById('fichaAlergias').textContent = a.alergias || 'Ninguna conocida';
+            document.getElementById('fichaVeterinario').textContent = a.veterinarioNombre;
+
+            document.getElementById('modalFicha').classList.add('active');
+        } catch (e) {
+            mostrarToast("Error al cargar la ficha clínica", "error");
+        }
+    }
+
+    function cerrarModalFicha() {
+        document.getElementById('modalFicha').classList.remove('active');
+    }
+
+    function imprimirFicha() {
+        const contenido = document.getElementById('imprimibleFichaArea').innerHTML;
+        const ventana = window.open('', '_blank', 'width=750,height=850');
+        ventana.document.write(`
+            <html>
+                <head>
+                    <title>Ficha Médica - SIGEVET</title>
+                    <style>
+                        body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; padding: 20px; color: #0f172a; }
+                        h2, h3, h4 { margin: 0; }
+                    </style>
+                </head>
+                <body>
+                    ${contenido}
+                </body>
+            </html>
+        `);
+        ventana.document.close();
+        ventana.focus();
+        setTimeout(() => {
+            ventana.print();
+            ventana.close();
+        }, 300);
+    }
+
+    function mostrarToast(mensaje, tipo = "info") {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast ${tipo}`;
+        toast.innerHTML = `<span>${mensaje}</span><span style="cursor:pointer; margin-left:12px;" onclick="this.parentElement.remove()">&times;</span>`;
+        container.appendChild(toast);
+        setTimeout(() => { if (toast.parentElement) toast.remove(); }, 3500);
+    }
+</script>
 
 </body>
 </html>

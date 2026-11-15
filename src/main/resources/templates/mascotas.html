@@ -26,7 +26,7 @@
                         Gestión de Mascotas
                         <span class="badge-live">Censo Activo</span>
                     </h1>
-                    <p>Fichas clínicas de pacientes caninos, felinos y especies registradas.</p>
+                    <p>Fichas clínicas de pacientes caninos, felinos y especies registradas con carnet digital.</p>
                 </div>
 
                 <div class="header-actions">
@@ -64,7 +64,7 @@
                     <div class="metric-info">
                         <span class="metric-label">CANINOS (PERROS)</span>
                         <span class="metric-value" id="kpiCaninos">0</span>
-                        <span class="metric-subtext">Especie predominante</span>
+                        <span class="metric-subtext">Especie canina</span>
                     </div>
                     <div class="metric-icon-wrap icon-green">🐶</div>
                 </div>
@@ -109,11 +109,11 @@
                         <thead>
                             <tr>
                                 <th>PACIENTE</th>
-                                <th>ESPECIE</th>
-                                <th>RAZA</th>
+                                <th>ESPECIE / RAZA</th>
                                 <th>GÉNERO</th>
-                                <th>FECHA NACIMIENTO</th>
-                                <th>PESO (KG)</th>
+                                <th>EDAD ESTIMADA</th>
+                                <th>PESO ACTUAL</th>
+                                <th>HISTORIAL CLÍNICO</th>
                                 <th>PROPIETARIO</th>
                                 <th style="text-align: right;">ACCIONES</th>
                             </tr>
@@ -135,7 +135,7 @@
 
 </div>
 
-<!-- MODAL REGISTRAR / EDITAR MASCOTA -->
+<!-- ================= MODAL REGISTRAR / EDITAR MASCOTA ================= -->
 <div class="modal-overlay" id="modalMascota">
     <div class="modal-container">
         <div class="modal-header">
@@ -208,17 +208,167 @@
     </div>
 </div>
 
+<!-- ================= MODAL EXPEDIENTE CLÍNICO INTEGRAL ================= -->
+<div class="modal-overlay" id="modalExpediente">
+    <div class="modal-container" style="max-width: 820px; max-height: 90vh; display: flex; flex-direction: column;">
+        <div class="modal-header">
+            <h3><span>📋</span> Expediente Clínico & Carnet de Inmunizaciones</h3>
+            <button class="btn-close-modal" onclick="cerrarModalExpediente()">&times;</button>
+        </div>
+
+        <div class="modal-body" style="overflow-y: auto; padding: 20px;" id="imprimibleExpediente">
+            <!-- TARJETA ENCABEZADO DEL PACIENTE -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:18px 22px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; gap:16px;">
+                <div style="display:flex; align-items:center; gap:16px;">
+                    <div id="expIcono" style="width:54px; height:54px; border-radius:50%; background:#e0f2fe; display:flex; align-items:center; justify-content:center; font-size:28px;">
+                        🐾
+                    </div>
+                    <div>
+                        <h2 style="font-size:22px; font-weight:800; color:#0f172a; margin:0;" id="expNombre">--</h2>
+                        <div style="color:#64748b; font-size:13px; margin-top:2px;">
+                            <span id="expEspecieRaza">--</span> • <span id="expGenero">--</span> • <strong id="expPeso">-- kg</strong>
+                        </div>
+                        <div style="color:#0f766e; font-size:12px; font-weight:700; margin-top:2px;" id="expEdad">
+                            Edad: --
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align:right; font-size:13px; border-left:1px solid #e2e8f0; padding-left:18px;">
+                    <span style="color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; display:block;">Propietario Responsable:</span>
+                    <strong style="color:#0f172a; font-size:15px; display:block;" id="expPropietario">--</strong>
+                    <div style="color:#475569;" id="expTelefono">Tel: --</div>
+                    <div style="color:#94a3b8; font-size:12px;" id="expDni">DNI: --</div>
+                </div>
+            </div>
+
+            <!-- TABS DE NAVEGACIÓN DENTRO DEL EXPEDIENTE -->
+            <div style="display:flex; gap:8px; border-bottom:1px solid #e2e8f0; margin-bottom:18px;">
+                <button class="btn-filter-pill active" id="tabBtnConsultas" onclick="cambiarTabExpediente('consultas', this)">🩺 Consultas Médicas (<span id="countAtenciones">0</span>)</button>
+                <button class="btn-filter-pill" id="tabBtnVacunas" onclick="cambiarTabExpediente('vacunas', this)">💉 Carnet de Vacunas (<span id="countVacunas">0</span>)</button>
+                <button class="btn-filter-pill" id="tabBtnAlergias" onclick="cambiarTabExpediente('alergias', this)">⚠️ Alergias & Alertas (<span id="countAlergias">0</span>)</button>
+                <button class="btn-filter-pill" id="tabBtnCitas" onclick="cambiarTabExpediente('citas', this)">📅 Citas Agendadas (<span id="countCitas">0</span>)</button>
+            </div>
+
+            <!-- CONTENIDO TAB 1: CONSULTAS MÉDICAS -->
+            <div id="tabContentConsultas">
+                <div id="listaAtencionesExpediente" style="display:flex; flex-direction:column; gap:12px;">
+                    Cargando atenciones médicas...
+                </div>
+            </div>
+
+            <!-- CONTENIDO TAB 2: CARNET DE VACUNAS -->
+            <div id="tabContentVacunas" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h4 style="font-size:14px; font-weight:700; color:#0f172a; margin:0;">Registro de Vacunación e Inmunizaciones</h4>
+                    <button class="btn-secondary" style="font-size:12px; padding:6px 12px;" onclick="toggleFormVacuna()">+ Aplicar Vacuna</button>
+                </div>
+
+                <!-- Formulario desplegable para aplicar vacuna -->
+                <div id="formVacunaWrap" style="display:none; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:14px; margin-bottom:16px;">
+                    <form onsubmit="guardarVacunaExpediente(event)">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label style="font-size:12px;">Seleccionar Vacuna *</label>
+                                <select id="inputVacunaSelect" required style="font-size:13px;"></select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size:12px;">Dosis / Observación</label>
+                                <input type="text" id="inputVacunaDosis" placeholder="Ej: Dosis Anual, Refuerzo" style="font-size:13px;">
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:flex-end; gap:8px;">
+                            <button type="button" class="btn-secondary" style="font-size:12px;" onclick="toggleFormVacuna()">Cancelar</button>
+                            <button type="submit" class="btn-primary" style="font-size:12px;">Guardar en Carnet</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="listaVacunasExpediente" style="display:flex; flex-direction:column; gap:10px;">
+                    Cargando carnet de vacunación...
+                </div>
+            </div>
+
+            <!-- CONTENIDO TAB 3: ALERGIAS Y ADVERTENCIAS -->
+            <div id="tabContentAlergias" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h4 style="font-size:14px; font-weight:700; color:#991b1b; margin:0;">⚠️ Alergias y Contraindicaciones Médicas</h4>
+                    <button class="btn-secondary" style="font-size:12px; padding:6px 12px;" onclick="toggleFormAlergia()">+ Añadir Alergia</button>
+                </div>
+
+                <!-- Formulario desplegable para registrar alergia -->
+                <div id="formAlergiaWrap" style="display:none; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:14px; margin-bottom:16px;">
+                    <form onsubmit="guardarAlergiaExpediente(event)">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label style="font-size:12px;">Alergia / Sustancia *</label>
+                                <select id="inputAlergiaSelect" required style="font-size:13px;"></select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size:12px;">Severidad</label>
+                                <select id="inputAlergiaSeveridad" style="font-size:13px;">
+                                    <option value="Alta (Crítica)">Alta (Crítica)</option>
+                                    <option value="Moderada" selected>Moderada</option>
+                                    <option value="Leve">Leve</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:flex-end; gap:8px;">
+                            <button type="button" class="btn-secondary" style="font-size:12px;" onclick="toggleFormAlergia()">Cancelar</button>
+                            <button type="submit" class="btn-primary" style="font-size:12px; background:#dc2626;">Registrar Alerta</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="listaAlergiasExpediente" style="display:flex; flex-direction:column; gap:10px;">
+                    Cargando historial de alergias...
+                </div>
+            </div>
+
+            <!-- CONTENIDO TAB 4: CITAS AGENDADAS -->
+            <div id="tabContentCitas" style="display:none;">
+                <div id="listaCitasExpediente" style="display:flex; flex-direction:column; gap:10px;">
+                    Cargando citas...
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="cerrarModalExpediente()">Cerrar</button>
+            <button type="button" class="btn-primary" onclick="imprimirExpedienteCompleto()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                Imprimir Expediente
+            </button>
+        </div>
+    </div>
+</div>
+
 <div th:replace="~{fragments/layout :: toastContainer}"></div>
 
 <!-- ================= JAVASCRIPT DINÁMICO (PATRÓN MVC REST) ================= -->
 <script>
     let mascotasGlobal = [];
     let clientesLista = [];
+    let catalogoVacunasGlobal = [];
+    let catalogoAlergiasGlobal = [];
+    let mascotaExpedienteActivaId = null;
 
     document.addEventListener("DOMContentLoaded", () => {
         cargarMascotas();
         cargarEstadisticas();
         cargarComboClientes();
+        cargarCatalogos();
+
+        // Si la URL trae un parámetro ?expediente=X, abrir automáticamente
+        const params = new URLSearchParams(window.location.search);
+        const expId = params.get('expediente');
+        if (expId) {
+            verExpediente(parseInt(expId));
+        }
     });
 
     async function cargarMascotas(filtro = "") {
@@ -273,12 +423,25 @@
         }
     }
 
+    async function cargarCatalogos() {
+        try {
+            const [vResp, aResp] = await Promise.all([
+                fetch('/api/mascotas/catalogo-vacunas'),
+                fetch('/api/mascotas/catalogo-alergias')
+            ]);
+            if (vResp.ok) catalogoVacunasGlobal = await vResp.json();
+            if (aResp.ok) catalogoAlergiasGlobal = await aResp.json();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
     function renderizarTabla(lista) {
         const tbody = document.getElementById('tablaMascotasBody');
         const stats = document.getElementById('statsContador');
         tbody.innerHTML = '';
 
-        stats.textContent = `Mostrando ${lista.length} de ${mascotasGlobal.length} pacientes`;
+        stats.textContent = `Mostrando ${lista.length} de ${mascotasGlobal.length} pacientes registrados`;
 
         if (lista.length === 0) {
             tbody.innerHTML = `
@@ -313,23 +476,42 @@
             tr.innerHTML = `
                 <td>
                     <div class="pet-cell">
-                        <div class="pet-avatar">${icono}</div>
+                        <div class="pet-avatar" style="cursor:pointer;" onclick="verExpediente(${m.id})">${icono}</div>
                         <div>
-                            <strong style="color:#0f172a; font-size:15px;">${m.nombre}</strong>
+                            <strong style="color:#0f172a; font-size:15px; cursor:pointer;" onclick="verExpediente(${m.id})" title="Ver Expediente">${m.nombre}</strong>
                             <div style="color:#94a3b8; font-size:12px;">ID: #${m.id}</div>
                         </div>
                     </div>
                 </td>
-                <td><span class="badge-species ${badgeClass}">${m.especie || 'N/D'}</span></td>
-                <td>${m.raza || '<span style="color:#94a3b8">Mestizo</span>'}</td>
+                <td>
+                    <span class="badge-species ${badgeClass}">${m.especie || 'N/D'}</span>
+                    <small style="display:block; color:#64748b; margin-top:3px;">${m.raza || 'Mestizo'}</small>
+                </td>
                 <td>${genderBadge}</td>
-                <td>${m.fechaNacimiento || '<span style="color:#94a3b8">N/D</span>'}</td>
+                <td>
+                    <strong style="color:#334155;">${m.edadCalculada || 'N/D'}</strong>
+                    <small style="display:block; color:#94a3b8;">${m.fechaNacimiento || ''}</small>
+                </td>
                 <td><strong>${m.peso ? m.peso + ' kg' : '<span style="color:#94a3b8">--</span>'}</strong></td>
                 <td>
+                    <button class="badge-mascotas" onclick="verExpediente(${m.id})" style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0;">
+                        🩺 ${m.totalAtenciones || 0} ${m.totalAtenciones === 1 ? 'consulta' : 'consultas'}
+                    </button>
+                </td>
+                <td>
                     <span class="owner-badge">👤 ${m.clienteNombre}</span>
+                    ${m.clienteTelefono ? `<small style="display:block; color:#64748b;">📞 ${m.clienteTelefono}</small>` : ''}
                 </td>
                 <td style="text-align: right;">
-                    <div style="display:flex; justify-content:flex-end; gap:8px;">
+                    <div style="display:flex; justify-content:flex-end; gap:6px;">
+                        <button class="btn-table-action" title="Ver Expediente Clínico Completo" onclick="verExpediente(${m.id})" style="background:#ecfdf5; color:#059669; border-color:#a7f3d0;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                            </svg>
+                        </button>
                         <button class="btn-table-action" title="Editar" onclick="abrirModalEditar(${m.id})">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -450,14 +632,13 @@
             cargarMascotas();
             cargarEstadisticas();
         } catch (error) {
-            console.error(error);
             mostrarToast("Error de conexión con el servidor", "error");
         }
     }
 
     async function confirmarEliminar(id, nombre, totalCitas) {
         if (totalCitas > 0) {
-            alert(`No se puede eliminar a "${nombre}" porque tiene ${totalCitas} cita(s) o atenciones registradas en su historial.`);
+            alert(`No se puede eliminar a "${nombre}" porque tiene citas o atenciones registradas en su historial.`);
             return;
         }
 
@@ -479,6 +660,330 @@
         } catch (e) {
             mostrarToast("Error de conexión", "error");
         }
+    }
+
+    /**
+     * =========================================================================
+     * EXPEDIENTE CLÍNICO & CARNET DE VACUNAS
+     * =========================================================================
+     */
+    async function verExpediente(mascotaId) {
+        mascotaExpedienteActivaId = mascotaId;
+        try {
+            const resp = await fetch(`/api/mascotas/${mascotaId}/expediente`);
+            if (!resp.ok) throw new Error("No se pudo cargar el expediente");
+            const data = await resp.json();
+
+            const m = data.mascota;
+            document.getElementById('expNombre').textContent = m.nombre;
+            document.getElementById('expEspecieRaza').textContent = `${m.especie} • ${m.raza || 'Mestizo'}`;
+            document.getElementById('expGenero').textContent = m.genero || 'Macho';
+            document.getElementById('expPeso').textContent = m.peso ? `${m.peso} kg` : '-- kg';
+            document.getElementById('expEdad').textContent = `Edad estimada: ${m.edadCalculada || 'No registrada'}`;
+
+            document.getElementById('expPropietario').textContent = m.clienteNombre || 'Sin propietario';
+            document.getElementById('expTelefono').textContent = m.clienteTelefono ? `Tel: ${m.clienteTelefono}` : 'Sin teléfono';
+            document.getElementById('expDni').textContent = m.clienteDni ? `DNI: ${m.clienteDni}` : 'DNI: No registrado';
+
+            const espLower = (m.especie || '').toLowerCase();
+            let icono = '🐾';
+            if (espLower.includes('perro') || espLower.includes('canino')) icono = '🐶';
+            else if (espLower.includes('gato') || espLower.includes('felino')) icono = '🐱';
+            document.getElementById('expIcono').textContent = icono;
+
+            // Badges contadores
+            document.getElementById('countAtenciones').textContent = data.atenciones.length;
+            document.getElementById('countVacunas').textContent = data.vacunas.length;
+            document.getElementById('countAlergias').textContent = data.alergias.length;
+            document.getElementById('countCitas').textContent = data.citas.length;
+
+            // Renderizar Tab 1: Atenciones
+            renderizarAtencionesExpediente(data.atenciones);
+
+            // Renderizar Tab 2: Vacunas
+            renderizarVacunasExpediente(data.vacunas);
+
+            // Renderizar Tab 3: Alergias
+            renderizarAlergiasExpediente(data.alergias);
+
+            // Renderizar Tab 4: Citas
+            renderizarCitasExpediente(data.citas);
+
+            // Preparar combos de formularios rápidos
+            prepararComboVacunas();
+            prepararComboAlergias();
+
+            // Abrir en Tab 1 por defecto
+            cambiarTabExpediente('consultas', document.getElementById('tabBtnConsultas'));
+
+            document.getElementById('modalExpediente').classList.add('active');
+
+        } catch (e) {
+            console.error(e);
+            mostrarToast("Error al cargar el expediente clínico", "error");
+        }
+    }
+
+    function cambiarTabExpediente(tab, btn) {
+        document.querySelectorAll('#modalExpediente .btn-filter-pill').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+
+        document.getElementById('tabContentConsultas').style.display = tab === 'consultas' ? 'block' : 'none';
+        document.getElementById('tabContentVacunas').style.display = tab === 'vacunas' ? 'block' : 'none';
+        document.getElementById('tabContentAlergias').style.display = tab === 'alergias' ? 'block' : 'none';
+        document.getElementById('tabContentCitas').style.display = tab === 'citas' ? 'block' : 'none';
+    }
+
+    function renderizarAtencionesExpediente(atenciones) {
+        const c = document.getElementById('listaAtencionesExpediente');
+        c.innerHTML = '';
+
+        if (atenciones.length === 0) {
+            c.innerHTML = `
+                <div style="text-align:center; padding:30px; color:#94a3b8; background:#f8fafc; border-radius:10px;">
+                    <p>No registra atenciones médicas previas.</p>
+                    <a href="/historial" class="btn-primary" style="display:inline-block; margin-top:8px; text-decoration:none; font-size:12px;">+ Registrar Consulta en Historial</a>
+                </div>
+            `;
+            return;
+        }
+
+        atenciones.forEach(a => {
+            const card = document.createElement('div');
+            card.style.cssText = 'background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:16px; border-left:4px solid #0f766e;';
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                    <div>
+                        <strong style="color:#0f766e; font-size:14px;">📅 Fecha de Consulta: ${a.fecha}</strong>
+                        <div style="color:#64748b; font-size:12px;">Atendido por: <strong>${a.veterinarioNombre}</strong></div>
+                    </div>
+                    <a href="/historial" style="font-size:12px; color:#2563eb; text-decoration:none; font-weight:700;">Ver Receta Oficial ➜</a>
+                </div>
+                <div style="margin-bottom:6px;">
+                    <strong style="font-size:12px; color:#0f172a; text-transform:uppercase;">Diagnóstico:</strong>
+                    <div style="color:#334155; font-size:13px; margin-top:2px;">${a.diagnostico}</div>
+                </div>
+                <div>
+                    <strong style="font-size:12px; color:#0f172a; text-transform:uppercase;">Tratamiento y Prescripción:</strong>
+                    <div style="color:#475569; font-size:13px; margin-top:2px; white-space:pre-line;">${a.tratamiento}</div>
+                </div>
+            `;
+            c.appendChild(card);
+        });
+    }
+
+    function renderizarVacunasExpediente(vacunas) {
+        const c = document.getElementById('listaVacunasExpediente');
+        c.innerHTML = '';
+
+        if (vacunas.length === 0) {
+            c.innerHTML = `
+                <div style="text-align:center; padding:24px; color:#94a3b8; background:#f8fafc; border-radius:10px;">
+                    El paciente aún no cuenta con vacunas registradas en su carnet digital.
+                </div>
+            `;
+            return;
+        }
+
+        vacunas.forEach(v => {
+            const card = document.createElement('div');
+            card.style.cssText = 'background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;';
+            card.innerHTML = `
+                <div>
+                    <strong style="color:#166534; font-size:14px;">💉 ${v.nombre}</strong>
+                    <div style="color:#15803d; font-size:12px;">Dosis: ${v.dosis || 'Dosis única'} ${v.observaciones ? '• ' + v.observaciones : ''}</div>
+                </div>
+                <div style="text-align:right;">
+                    <span style="background:#dcfce7; color:#14532d; font-size:12px; font-weight:700; padding:4px 10px; border-radius:12px;">
+                        ${v.fechaAplicacion}
+                    </span>
+                </div>
+            `;
+            c.appendChild(card);
+        });
+    }
+
+    function renderizarAlergiasExpediente(alergias) {
+        const c = document.getElementById('listaAlergiasExpediente');
+        c.innerHTML = '';
+
+        if (alergias.length === 0) {
+            c.innerHTML = `
+                <div style="text-align:center; padding:24px; color:#16a34a; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px;">
+                    ✓ Paciente sin alergias o reacciones adversas reportadas.
+                </div>
+            `;
+            return;
+        }
+
+        alergias.forEach(a => {
+            const card = document.createElement('div');
+            card.style.cssText = 'background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;';
+            card.innerHTML = `
+                <div>
+                    <strong style="color:#991b1b; font-size:14px;">⚠️ ${a.nombre}</strong>
+                    <div style="color:#b91c1c; font-size:12px;">Categoría: ${a.categoria || 'Clínica'} • Severidad: <strong>${a.severidad || 'Moderada'}</strong></div>
+                </div>
+                <div style="text-align:right;">
+                    <span style="background:#fee2e2; color:#7f1d1d; font-size:11px; font-weight:700; padding:4px 8px; border-radius:8px;">
+                        Detectado: ${a.fechaDeteccion || 'Consulta'}
+                    </span>
+                </div>
+            `;
+            c.appendChild(card);
+        });
+    }
+
+    function renderizarCitasExpediente(citas) {
+        const c = document.getElementById('listaCitasExpediente');
+        c.innerHTML = '';
+
+        if (citas.length === 0) {
+            c.innerHTML = `
+                <div style="text-align:center; padding:24px; color:#94a3b8; background:#f8fafc; border-radius:10px;">
+                    No registra citas agendadas.
+                </div>
+            `;
+            return;
+        }
+
+        citas.forEach(cita => {
+            const card = document.createElement('div');
+            card.style.cssText = 'background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;';
+            card.innerHTML = `
+                <div>
+                    <strong style="color:#0f172a; font-size:14px;">📅 ${cita.fecha} (${cita.hora || '--:--'})</strong>
+                    <div style="color:#64748b; font-size:13px;">Motivo: ${cita.motivo} | ${cita.veterinarioNombre}</div>
+                </div>
+                <div>
+                    <span class="badge-status-pill ${cita.estado === 'ATENDIDA' ? 'pill-atendida' : 'pill-programada'}">
+                        ● ${cita.estado}
+                    </span>
+                </div>
+            `;
+            c.appendChild(card);
+        });
+    }
+
+    function toggleFormVacuna() {
+        const w = document.getElementById('formVacunaWrap');
+        w.style.display = (w.style.display === 'none' || !w.style.display) ? 'block' : 'none';
+    }
+
+    function toggleFormAlergia() {
+        const w = document.getElementById('formAlergiaWrap');
+        w.style.display = (w.style.display === 'none' || !w.style.display) ? 'block' : 'none';
+    }
+
+    function prepararComboVacunas() {
+        const sel = document.getElementById('inputVacunaSelect');
+        sel.innerHTML = '<option value="" disabled selected>Seleccione vacuna del catálogo...</option>';
+        catalogoVacunasGlobal.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.id;
+            opt.textContent = `${v.nombre} (${v.especieDestino || 'General'})`;
+            sel.appendChild(opt);
+        });
+    }
+
+    function prepararComboAlergias() {
+        const sel = document.getElementById('inputAlergiaSelect');
+        sel.innerHTML = '<option value="" disabled selected>Seleccione alergia del catálogo...</option>';
+        catalogoAlergiasGlobal.forEach(a => {
+            const opt = document.createElement('option');
+            opt.value = a.id;
+            opt.textContent = `${a.nombre} (${a.categoria || 'General'})`;
+            sel.appendChild(opt);
+        });
+    }
+
+    async function guardarVacunaExpediente(e) {
+        e.preventDefault();
+        if (!mascotaExpedienteActivaId) return;
+
+        const payload = {
+            vacunaId: document.getElementById('inputVacunaSelect').value,
+            dosis: document.getElementById('inputVacunaDosis').value.trim() || 'Dosis Anual',
+            fechaAplicacion: new Date().toISOString().split('T')[0]
+        };
+
+        try {
+            const resp = await fetch(`/api/mascotas/${mascotaExpedienteActivaId}/vacunas`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (resp.ok) {
+                mostrarToast("Vacuna registrada con éxito en el carnet", "success");
+                toggleFormVacuna();
+                verExpediente(mascotaExpedienteActivaId);
+            } else {
+                mostrarToast("Error al guardar vacuna", "error");
+            }
+        } catch (e) {
+            mostrarToast("Error de conexión", "error");
+        }
+    }
+
+    async function guardarAlergiaExpediente(e) {
+        e.preventDefault();
+        if (!mascotaExpedienteActivaId) return;
+
+        const payload = {
+            alergiaId: document.getElementById('inputAlergiaSelect').value,
+            severidad: document.getElementById('inputAlergiaSeveridad').value,
+            fechaDeteccion: new Date().toISOString().split('T')[0]
+        };
+
+        try {
+            const resp = await fetch(`/api/mascotas/${mascotaExpedienteActivaId}/alergias`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (resp.ok) {
+                mostrarToast("Alergia registrada en el expediente", "success");
+                toggleFormAlergia();
+                verExpediente(mascotaExpedienteActivaId);
+            } else {
+                mostrarToast("Error al guardar alergia", "error");
+            }
+        } catch (e) {
+            mostrarToast("Error de conexión", "error");
+        }
+    }
+
+    function cerrarModalExpediente() {
+        document.getElementById('modalExpediente').classList.remove('active');
+        mascotaExpedienteActivaId = null;
+    }
+
+    function imprimirExpedienteCompleto() {
+        const contenido = document.getElementById('imprimibleExpediente').innerHTML;
+        const ventana = window.open('', '_blank', 'width=800,height=900');
+        ventana.document.write(`
+            <html>
+                <head>
+                    <title>Expediente Clínico - SIGEVET</title>
+                    <style>
+                        body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; padding: 24px; color: #0f172a; }
+                        h2, h3, h4 { margin: 0; }
+                        button { display: none !important; }
+                    </style>
+                </head>
+                <body>
+                    ${contenido}
+                </body>
+            </html>
+        `);
+        ventana.document.close();
+        ventana.focus();
+        setTimeout(() => {
+            ventana.print();
+            ventana.close();
+        }, 300);
     }
 
     function mostrarToast(mensaje, tipo = "info") {

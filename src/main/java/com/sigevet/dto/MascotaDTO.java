@@ -1,6 +1,7 @@
 package com.sigevet.dto;
 
 import java.time.LocalDate;
+import java.time.Period;
 
 public class MascotaDTO {
 
@@ -14,12 +15,17 @@ public class MascotaDTO {
     private Integer clienteId;
     private String clienteNombre;
     private String clienteTelefono;
+    private String clienteDni;
     private long totalCitas;
+    private long totalAtenciones;
+    private String edadCalculada;
 
     public MascotaDTO() {
     }
 
-    public MascotaDTO(Integer id, String nombre, String especie, String raza, LocalDate fechaNacimiento, String genero, Double peso, Integer clienteId, String clienteNombre, String clienteTelefono, long totalCitas) {
+    public MascotaDTO(Integer id, String nombre, String especie, String raza, LocalDate fechaNacimiento,
+                      String genero, Double peso, Integer clienteId, String clienteNombre,
+                      String clienteTelefono, String clienteDni, long totalCitas, long totalAtenciones) {
         this.id = id;
         this.nombre = nombre;
         this.especie = especie;
@@ -30,7 +36,27 @@ public class MascotaDTO {
         this.clienteId = clienteId;
         this.clienteNombre = clienteNombre;
         this.clienteTelefono = clienteTelefono;
+        this.clienteDni = clienteDni;
         this.totalCitas = totalCitas;
+        this.totalAtenciones = totalAtenciones;
+        this.edadCalculada = calcularEdad(fechaNacimiento);
+    }
+
+    private String calcularEdad(LocalDate fecha) {
+        if (fecha == null) return "No registrada";
+        LocalDate hoy = LocalDate.now();
+        if (fecha.isAfter(hoy)) return "Recién nacido";
+        Period p = Period.between(fecha, hoy);
+        int anos = p.getYears();
+        int meses = p.getMonths();
+        if (anos > 0) {
+            return anos + (anos == 1 ? " año" : " años") + (meses > 0 ? ", " + meses + (meses == 1 ? " mes" : " meses") : "");
+        } else if (meses > 0) {
+            return meses + (meses == 1 ? " mes" : " meses");
+        } else {
+            int dias = p.getDays();
+            return dias + (dias == 1 ? " día" : " días");
+        }
     }
 
     public Integer getId() {
@@ -71,6 +97,7 @@ public class MascotaDTO {
 
     public void setFechaNacimiento(LocalDate fechaNacimiento) {
         this.fechaNacimiento = fechaNacimiento;
+        this.edadCalculada = calcularEdad(fechaNacimiento);
     }
 
     public String getGenero() {
@@ -113,11 +140,35 @@ public class MascotaDTO {
         this.clienteTelefono = clienteTelefono;
     }
 
+    public String getClienteDni() {
+        return clienteDni;
+    }
+
+    public void setClienteDni(String clienteDni) {
+        this.clienteDni = clienteDni;
+    }
+
     public long getTotalCitas() {
         return totalCitas;
     }
 
     public void setTotalCitas(long totalCitas) {
         this.totalCitas = totalCitas;
+    }
+
+    public long getTotalAtenciones() {
+        return totalAtenciones;
+    }
+
+    public void setTotalAtenciones(long totalAtenciones) {
+        this.totalAtenciones = totalAtenciones;
+    }
+
+    public String getEdadCalculada() {
+        return edadCalculada;
+    }
+
+    public void setEdadCalculada(String edadCalculada) {
+        this.edadCalculada = edadCalculada;
     }
 }

@@ -531,9 +531,14 @@
                             <strong style="color:#0f172a; font-size:15px;">${m.nombre}</strong>
                             <div style="color:#64748b; font-size:13px;">${m.especie || 'Especie N/D'} • ${m.raza || 'Raza N/D'}</div>
                         </div>
-                        <div style="text-align:right; font-size:13px; color:#475569;">
-                            <span>Género: <strong>${m.genero || 'N/D'}</strong></span><br>
-                            <span>Peso: <strong>${m.peso ? m.peso + ' kg' : 'N/D'}</strong></span>
+                        <div style="text-align:right; font-size:13px; color:#475569; display:flex; align-items:center; gap:12px;">
+                            <div>
+                                <span>Género: <strong>${m.genero || 'N/D'}</strong></span><br>
+                                <span>Peso: <strong>${m.peso ? m.peso + ' kg' : 'N/D'}</strong></span>
+                            </div>
+                            <a href="/mascotas?expediente=${m.id}" class="btn-primary" style="font-size:12px; padding:6px 12px; text-decoration:none;" title="Ver Expediente Clínico Completo">
+                                📋 Expediente
+                            </a>
                         </div>
                     </div>
                 `;

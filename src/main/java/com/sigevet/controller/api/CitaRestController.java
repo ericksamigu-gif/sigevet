@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
@@ -91,6 +92,17 @@ public class CitaRestController {
         Integer mascotaId = Integer.parseInt(mascotaIdObj.toString());
         Integer veterinarioId = Integer.parseInt(veterinarioIdObj.toString());
 
+        LocalDate fecha = LocalDate.parse(fechaStr.trim());
+        LocalTime hora = LocalTime.parse(horaStr.trim());
+
+        // Regla de Negocio (No retroactividad): Solo permitir agendar citas en el horario actual o posterior
+        LocalDateTime fechaHoraCita = LocalDateTime.of(fecha, hora);
+        if (fechaHoraCita.isBefore(LocalDateTime.now().minusMinutes(1))) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "No se puede agendar una cita en una fecha u hora pasada. Debe seleccionar el horario actual o posterior."
+            ));
+        }
+
         Mascota mascota = mascotaRepository.findById(mascotaId).orElse(null);
         if (mascota == null) {
             return ResponseEntity.badRequest().body(Map.of("error", "La mascota seleccionada no existe"));
@@ -102,8 +114,8 @@ public class CitaRestController {
         }
 
         Cita cita = new Cita();
-        cita.setFecha(LocalDate.parse(fechaStr.trim()));
-        cita.setHora(LocalTime.parse(horaStr.trim()));
+        cita.setFecha(fecha);
+        cita.setHora(hora);
         cita.setMotivo(motivo != null && !motivo.trim().isEmpty() ? motivo.trim() : "Consulta General");
         cita.setEstado(estado != null && !estado.trim().isEmpty() ? estado.trim().toUpperCase() : "PROGRAMADA");
         cita.setMascota(mascota);
@@ -126,12 +138,24 @@ public class CitaRestController {
             Object mascotaIdObj = body.get("mascotaId");
             Object veterinarioIdObj = body.get("veterinarioId");
 
-            if (fechaStr != null && !fechaStr.trim().isEmpty()) {
-                cita.setFecha(LocalDate.parse(fechaStr.trim()));
+            LocalDate nuevaFecha = (fechaStr != null && !fechaStr.trim().isEmpty()) ? LocalDate.parse(fechaStr.trim()) : cita.getFecha();
+            LocalTime nuevaHora = (horaStr != null && !horaStr.trim().isEmpty()) ? LocalTime.parse(horaStr.trim()) : cita.getHora();
+            String nuevoEstado = (estado != null && !estado.trim().isEmpty()) ? estado.trim().toUpperCase() : cita.getEstado();
+
+            // Si la cita se mantiene o programa en estado activo, validar no retroactividad ante cambios de fecha/hora
+            if (!"ATENDIDA".equalsIgnoreCase(nuevoEstado) && !"CANCELADA".equalsIgnoreCase(nuevoEstado)) {
+                LocalDateTime nuevaFechaHora = LocalDateTime.of(nuevaFecha, nuevaHora);
+                if (nuevaFechaHora.isBefore(LocalDateTime.now().minusMinutes(1))) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                            "error", "No se puede reprogramar la cita a una fecha u hora pasada. Debe seleccionar el horario actual o posterior."
+                    ));
+                }
             }
-            if (horaStr != null && !horaStr.trim().isEmpty()) {
-                cita.setHora(LocalTime.parse(horaStr.trim()));
-            }
+
+            cita.setFecha(nuevaFecha);
+            cita.setHora(nuevaHora);
+            cita.setEstado(nuevoEstado);
+
             if (motivo != null) {
                 cita.setMotivo(motivo.trim());
             }

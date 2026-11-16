@@ -446,7 +446,9 @@
         const hoy = new Date().toISOString().split('T')[0];
         fechaAgendaSeleccionada = hoy;
         document.getElementById('agendaFechaPicker').value = hoy;
-        document.getElementById('inputFecha').value = hoy;
+        const inputFecha = document.getElementById('inputFecha');
+        inputFecha.value = hoy;
+        inputFecha.min = hoy;
 
         cargarCitas();
         cargarEstadisticas();
@@ -724,6 +726,13 @@
      * Clic en horario disponible de la agenda: autocompleta fecha y hora
      */
     function abrirModalCrearConHorario(fecha, hora) {
+        const fechaHoraSlot = new Date(`${fecha}T${hora}:00`);
+        const ahora = new Date();
+        ahora.setMinutes(ahora.getMinutes() - 1);
+        if (fechaHoraSlot < ahora) {
+            mostrarToast("El horario seleccionado ya ha pasado. Seleccione el horario actual o posterior.", "error");
+            return;
+        }
         abrirModalCrear();
         document.getElementById('inputFecha').value = fecha;
         document.getElementById('inputHora').value = hora;
@@ -965,6 +974,21 @@
 
     async function guardarCita(e) {
         e.preventDefault();
+
+        const fechaVal = document.getElementById('inputFecha').value;
+        const horaVal = document.getElementById('inputHora').value;
+        const estadoVal = document.getElementById('inputEstado').value;
+
+        // Validación frontend de no retroactividad
+        if (fechaVal && horaVal && estadoVal !== 'ATENDIDA' && estadoVal !== 'CANCELADA') {
+            const fechaHoraIngresada = new Date(`${fechaVal}T${horaVal}:00`);
+            const ahora = new Date();
+            ahora.setMinutes(ahora.getMinutes() - 1);
+            if (fechaHoraIngresada < ahora) {
+                mostrarToast("No se puede agendar una cita en una fecha u hora pasada. Debe seleccionar el horario actual o posterior.", "error");
+                return;
+            }
+        }
 
         const id = document.getElementById('citaId').value;
         const payload = {

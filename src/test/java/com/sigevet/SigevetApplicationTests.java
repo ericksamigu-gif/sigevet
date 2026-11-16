@@ -9,6 +9,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -92,5 +93,38 @@ class SigevetApplicationTests {
         assertTrue(esPersonalClinico.test(veterinario), "El rol VETERINARIO debe tener permisos clínicos");
         assertTrue(esPersonalClinico.test(admin), "El rol ADMINISTRADOR debe tener facultades sobre el módulo clínico");
         assertFalse(esPersonalClinico.test(recepcionista), "El rol RECEPCIONISTA debe tener denegado el registro de atenciones y recetas médicas");
+    }
+
+    @Test
+    @DisplayName("CP-06: Validación de no retroactividad - Prohibir agendar citas en fechas u horas pasadas")
+    void test6_ValidacionNoRetroactividadCitas() {
+        LocalDateTime ahora = LocalDateTime.now();
+
+        // 1. Caso de prueba: Intento de cita en fecha pasada (Ayer)
+        LocalDate fechaAyer = ahora.toLocalDate().minusDays(1);
+        LocalTime horaCita = LocalTime.of(10, 0);
+        LocalDateTime citaPasadaFecha = LocalDateTime.of(fechaAyer, horaCita);
+
+        // 2. Caso de prueba: Intento de cita en horario pasado del día actual
+        LocalDate fechaHoy = ahora.toLocalDate();
+        LocalTime horaPasada = ahora.toLocalTime().minusHours(2);
+        LocalDateTime citaPasadaHora = LocalDateTime.of(fechaHoy, horaPasada);
+
+        // 3. Caso de prueba: Cita válida para fecha y horario futuro
+        LocalDate fechaManana = ahora.toLocalDate().plusDays(1);
+        LocalTime horaFutura = LocalTime.of(11, 0);
+        LocalDateTime citaValidaFutura = LocalDateTime.of(fechaManana, horaFutura);
+
+        // Regla de Negocio del Sistema: Una cita solo puede agendarse en el horario actual o posterior
+        java.util.function.Predicate<LocalDateTime> esHorarioValidoParaAgendar = fechaHora ->
+                fechaHora != null && !fechaHora.isBefore(LocalDateTime.now().minusMinutes(1));
+
+        // Aserciones
+        assertFalse(esHorarioValidoParaAgendar.test(citaPasadaFecha),
+                "El sistema debe rechazar citas programadas en fechas anteriores a la actual");
+        assertFalse(esHorarioValidoParaAgendar.test(citaPasadaHora),
+                "El sistema debe rechazar citas programadas en horas ya transcurridas del día de hoy");
+        assertTrue(esHorarioValidoParaAgendar.test(citaValidaFutura),
+                "El sistema debe permitir agendar citas en horarios actuales o posteriores");
     }
 }

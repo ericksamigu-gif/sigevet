@@ -40,19 +40,51 @@ class SigevetApplicationTests {
     }
 
     @Test
-    @DisplayName("CP-03: Validación de registro de cliente con DNI y datos obligatorios")
-    void test3_RegistrarClienteDniValido() {
+    @DisplayName("CP-03: Validación de registro de cliente con DNI estricto y formato de correo electrónico")
+    void test3_RegistrarClienteDniYCorreoValidos() {
+        final String regexDni = "^\\d{8}$";
+        final String regexCorreo = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
+
+        // 1. Caso DNI Válido (8 dígitos numéricos)
+        String dniValido = "74859612";
+        assertTrue(dniValido.matches(regexDni), "El DNI válido de 8 dígitos debe ser aceptado");
+
+        // 2. Casos DNI Inválidos:
+        String dniConLetras = "7485961A";
+        String dniConMasDe8Digitos = "7485961234";
+        String dniConMenosDe8Digitos = "74859";
+        String dniConSimbolos = "7485-961";
+
+        assertFalse(dniConLetras.matches(regexDni), "El sistema debe rechazar DNI que contenga letras");
+        assertFalse(dniConMasDe8Digitos.matches(regexDni), "El sistema debe rechazar DNI con más de 8 dígitos");
+        assertFalse(dniConMenosDe8Digitos.matches(regexDni), "El sistema debe rechazar DNI con menos de 8 dígitos");
+        assertFalse(dniConSimbolos.matches(regexDni), "El sistema debe rechazar DNI con caracteres especiales");
+
+        // 3. Caso Correo Válido
+        String correoValido = "carlos.mendoza@gmail.com";
+        assertTrue(correoValido.matches(regexCorreo), "El formato estándar de correo debe ser aceptado");
+
+        // 4. Casos Correo Inválidos
+        String correoSinArroba = "carlos.mendoza.gmail.com";
+        String correoSinDominio = "carlos.mendoza@";
+        String correoSinExtension = "carlos.mendoza@gmail";
+
+        assertFalse(correoSinArroba.matches(regexCorreo), "El sistema debe rechazar correos sin '@'");
+        assertFalse(correoSinDominio.matches(regexCorreo), "El sistema debe rechazar correos sin servidor de dominio");
+        assertFalse(correoSinExtension.matches(regexCorreo), "El sistema debe rechazar correos sin extensión de dominio válida (.com, etc)");
+
+        // 5. Entidad Cliente con datos válidos
         Cliente cliente = new Cliente();
         cliente.setNombre("Carlos");
         cliente.setApellido("Mendoza");
-        cliente.setDni("74859612");
+        cliente.setDni(dniValido);
         cliente.setTelefono("987654321");
-        cliente.setCorreo("carlos.mendoza@gmail.com");
+        cliente.setCorreo(correoValido);
 
         assertNotNull(cliente.getNombre());
-        assertNotNull(cliente.getDni());
-        assertEquals(8, cliente.getDni().length(), "El DNI en Perú debe contar con exactamente 8 dígitos");
-        assertTrue(cliente.getDni().matches("\\d{8}"), "El DNI debe contener solo caracteres numéricos");
+        assertNotNull(cliente.getApellido());
+        assertTrue(cliente.getDni().matches(regexDni));
+        assertTrue(cliente.getCorreo().matches(regexCorreo));
     }
 
     @Test

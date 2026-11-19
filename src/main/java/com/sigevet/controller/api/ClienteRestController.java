@@ -21,6 +21,9 @@ public class ClienteRestController {
     private final ClienteRepository clienteRepository;
     private final MascotaRepository mascotaRepository;
 
+    private static final String REGEX_DNI = "^\\d{8}$";
+    private static final String REGEX_CORREO = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
+
     public ClienteRestController(ClienteRepository clienteRepository, MascotaRepository mascotaRepository) {
         this.clienteRepository = clienteRepository;
         this.mascotaRepository = mascotaRepository;
@@ -95,15 +98,24 @@ public class ClienteRestController {
         }
 
         String dniLimpio = cliente.getDni().trim();
+        if (!dniLimpio.matches(REGEX_DNI)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "El DNI debe contener exactamente 8 dígitos numéricos (sin letras ni caracteres especiales)"));
+        }
+
         if (clienteRepository.existsByDni(dniLimpio)) {
             return ResponseEntity.badRequest().body(Map.of("error", "Ya existe un cliente registrado con el DNI: " + dniLimpio));
+        }
+
+        String correoLimpio = cliente.getCorreo() != null ? cliente.getCorreo().trim() : "";
+        if (!correoLimpio.isEmpty() && !correoLimpio.matches(REGEX_CORREO)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "El formato del correo electrónico es inválido (ejemplo: usuario@correo.com)"));
         }
 
         cliente.setDni(dniLimpio);
         cliente.setNombre(cliente.getNombre().trim());
         cliente.setApellido(cliente.getApellido().trim());
         if (cliente.getTelefono() != null) cliente.setTelefono(cliente.getTelefono().trim());
-        if (cliente.getCorreo() != null) cliente.setCorreo(cliente.getCorreo().trim());
+        cliente.setCorreo(correoLimpio.isEmpty() ? null : correoLimpio);
         if (cliente.getDireccion() != null) cliente.setDireccion(cliente.getDireccion().trim());
 
         Cliente guardado = clienteRepository.save(cliente);
@@ -139,15 +151,24 @@ public class ClienteRestController {
             }
 
             String dniLimpio = datos.getDni().trim();
+            if (!dniLimpio.matches(REGEX_DNI)) {
+                return ResponseEntity.badRequest().body(Map.of("error", "El DNI debe contener exactamente 8 dígitos numéricos (sin letras ni caracteres especiales)"));
+            }
+
             if (clienteRepository.existsByDniAndIdNot(dniLimpio, id)) {
                 return ResponseEntity.badRequest().body(Map.of("error", "El DNI " + dniLimpio + " ya está asignado a otro cliente"));
+            }
+
+            String correoLimpio = datos.getCorreo() != null ? datos.getCorreo().trim() : "";
+            if (!correoLimpio.isEmpty() && !correoLimpio.matches(REGEX_CORREO)) {
+                return ResponseEntity.badRequest().body(Map.of("error", "El formato del correo electrónico es inválido (ejemplo: usuario@correo.com)"));
             }
 
             clienteExistente.setDni(dniLimpio);
             clienteExistente.setNombre(datos.getNombre().trim());
             clienteExistente.setApellido(datos.getApellido().trim());
             clienteExistente.setTelefono(datos.getTelefono() != null ? datos.getTelefono().trim() : null);
-            clienteExistente.setCorreo(datos.getCorreo() != null ? datos.getCorreo().trim() : null);
+            clienteExistente.setCorreo(correoLimpio.isEmpty() ? null : correoLimpio);
             clienteExistente.setDireccion(datos.getDireccion() != null ? datos.getDireccion().trim() : null);
 
             Cliente actualizado = clienteRepository.save(clienteExistente);

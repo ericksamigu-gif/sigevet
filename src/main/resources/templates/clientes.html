@@ -169,8 +169,8 @@
             <div class="modal-body">
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="inputDni">DNI / Documento *</label>
-                        <input type="text" id="inputDni" placeholder="Ej: 74859632" required maxlength="20">
+                        <label for="inputDni">DNI (8 dígitos numéricos) *</label>
+                        <input type="text" id="inputDni" placeholder="Ej: 74859632" required maxlength="8" pattern="\d{8}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
                     </div>
 
                     <div class="form-group">
@@ -584,13 +584,31 @@
     async function guardarCliente(e) {
         e.preventDefault();
 
+        const dni = document.getElementById('inputDni').value.trim();
+        const correo = document.getElementById('inputCorreo').value.trim();
+
+        // Validación estricta de DNI: exactamente 8 dígitos numéricos
+        if (!/^\d{8}$/.test(dni)) {
+            mostrarToast("El DNI debe contener exactamente 8 dígitos numéricos (sin letras).", "error");
+            document.getElementById('inputDni').focus();
+            return;
+        }
+
+        // Validación de formato de correo electrónico
+        const regexEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (correo && !regexEmail.test(correo)) {
+            mostrarToast("El formato del correo electrónico es inválido (ejemplo: usuario@correo.com).", "error");
+            document.getElementById('inputCorreo').focus();
+            return;
+        }
+
         const id = document.getElementById('clienteId').value;
         const payload = {
-            dni: document.getElementById('inputDni').value.trim(),
+            dni: dni,
             nombre: document.getElementById('inputNombre').value.trim(),
             apellido: document.getElementById('inputApellido').value.trim(),
             telefono: document.getElementById('inputTelefono').value.trim(),
-            correo: document.getElementById('inputCorreo').value.trim(),
+            correo: correo,
             direccion: document.getElementById('inputDireccion').value.trim()
         };
 

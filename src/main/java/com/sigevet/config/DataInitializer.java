@@ -11,6 +11,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.Statement;
+
 @Configuration
 public class DataInitializer {
 
@@ -18,8 +22,20 @@ public class DataInitializer {
     public CommandLineRunner initData(UsuarioRepository usuarioRepository,
                                      PasswordEncoder passwordEncoder,
                                      VacunaRepository vacunaRepository,
-                                     AlergiaRepository alergiaRepository) {
+                                     AlergiaRepository alergiaRepository,
+                                     DataSource dataSource) {
         return args -> {
+            // Asegurar que las columnas activo y auditoría estén actualizadas en las filas existentes
+            try (Connection conn = dataSource.getConnection();
+                 Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("UPDATE usuario SET activo = TRUE WHERE activo = FALSE OR activo IS NULL");
+                stmt.executeUpdate("UPDATE cliente SET activo = TRUE WHERE activo = FALSE OR activo IS NULL");
+                stmt.executeUpdate("UPDATE mascota SET activo = TRUE WHERE activo = FALSE OR activo IS NULL");
+                stmt.executeUpdate("UPDATE cita SET activo = TRUE WHERE activo = FALSE OR activo IS NULL");
+                stmt.executeUpdate("UPDATE atencion_medica SET activo = TRUE WHERE activo = FALSE OR activo IS NULL");
+                stmt.executeUpdate("UPDATE reporte SET activo = TRUE WHERE activo = FALSE OR activo IS NULL");
+            } catch (Exception ignored) {}
+
             // Usuarios con BCrypt y Roles RBAC
             crearOActualizarUsuario(usuarioRepository, passwordEncoder, "admin", "123456", "Administrador", "General", "ADMINISTRADOR", "admin@sigevet.com");
             crearOActualizarUsuario(usuarioRepository, passwordEncoder, "jlopez", "123456", "Juan", "Lopez", "VETERINARIO", "jlopez@sigevet.com");
@@ -51,7 +67,10 @@ public class DataInitializer {
     private void crearOActualizarUsuario(UsuarioRepository repo, PasswordEncoder encoder,
                                          String username, String passwordPlana,
                                          String nombre, String apellido, String rol, String correo) {
-        Usuario usuario = repo.findByUsername(username);
+        Usuario usuario = repo.findByUsernameAnyStatus(username);
+        if (usuario == null) {
+            usuario = repo.findByUsername(username);
+        }
         if (usuario == null) {
             usuario = new Usuario();
             usuario.setUsername(username);
@@ -61,8 +80,10 @@ public class DataInitializer {
             usuario.setRol(rol);
             usuario.setCorreo(correo);
             usuario.setEstado("ACTIVO");
+            usuario.setActivo(true);
             repo.save(usuario);
         } else {
+            usuario.setActivo(true);
             usuario.setPassword(encoder.encode(passwordPlana));
             usuario.setRol(rol);
             if (usuario.getEstado() == null || usuario.getEstado().isBlank()) {

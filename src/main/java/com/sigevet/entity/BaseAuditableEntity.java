@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @MappedSuperclass
 public abstract class BaseAuditableEntity {
 
-    @Column(name = "activo", nullable = false)
+    @Column(name = "activo", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
     private Boolean activo = true;
 
     @Column(name = "fecha_creacion", updatable = false)

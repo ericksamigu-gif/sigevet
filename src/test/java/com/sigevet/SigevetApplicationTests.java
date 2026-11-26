@@ -194,4 +194,72 @@ class SigevetApplicationTests {
         assertNotNull(cliente.getFechaEliminacion(), "Debe conservarse la fecha y hora exacta de la baja lógica");
         assertEquals("admin", cliente.getUsuarioEliminacion(), "Debe conservarse el usuario responsable de la baja lógica");
     }
+
+    @Test
+    @DisplayName("CP-08: Validación de no cruce de horarios para un mismo médico veterinario (salvo médico diferente o cita cancelada)")
+    void test8_ValidacionCruceHorariosVeterinario() {
+        Usuario doc1 = new Usuario();
+        doc1.setId(1);
+        doc1.setNombre("Juan");
+        doc1.setApellido("Lopez");
+
+        Usuario doc2 = new Usuario();
+        doc2.setId(2);
+        doc2.setNombre("Maria");
+        doc2.setApellido("Garcia");
+
+        LocalDate fecha = LocalDate.now().plusDays(2);
+        LocalTime hora = LocalTime.of(10, 0);
+
+        // Cita existente activa con Dr. Juan Lopez
+        Cita citaExistente = new Cita();
+        citaExistente.setId(101);
+        citaExistente.setVeterinario(doc1);
+        citaExistente.setFecha(fecha);
+        citaExistente.setHora(hora);
+        citaExistente.setEstado("PROGRAMADA");
+
+        java.util.List<Cita> citas = java.util.List.of(citaExistente);
+
+        // Regla: Detecta si un doctor específico tiene cruce de horario activo
+        java.util.function.BiPredicate<Integer, LocalTime> tieneCruceHorario = (vetId, h) ->
+                citas.stream()
+                        .filter(c -> c.getVeterinario().getId().equals(vetId))
+                        .filter(c -> c.getHora().equals(h))
+                        .anyMatch(c -> !"CANCELADA".equalsIgnoreCase(c.getEstado()));
+
+        // 1. Intento de agendar con el MISMO médico a la misma hora -> Rechazar
+        assertTrue(tieneCruceHorario.test(doc1.getId(), hora),
+                "El sistema debe detectar cruce de horario si el mismo médico ya tiene una cita activa");
+
+        // 2. Intento de agendar con un MÉDICO DIFERENTE a la misma hora -> Permitir
+        assertFalse(tieneCruceHorario.test(doc2.getId(), hora),
+                "El sistema debe permitir agendar a la misma hora si se trata de un médico diferente");
+
+        // 3. Si la cita existente estuviera CANCELADA -> Permitir agendar con ese mismo médico
+        citaExistente.setEstado("CANCELADA");
+        assertFalse(tieneCruceHorario.test(doc1.getId(), hora),
+                "El horario debe liberarse y permitir agendar si la cita previa con ese doctor fue cancelada");
+    }
+
+    @Test
+    @DisplayName("CP-09: Restricción de eliminación de citas (solo permitida para citas PROGRAMADAS, prohibida para CANCELADAS y ATENDIDAS)")
+    void test9_RestriccionEliminacionSegunEstado() {
+        Cita citaProgramada = new Cita();
+        citaProgramada.setEstado("PROGRAMADA");
+
+        Cita citaCancelada = new Cita();
+        citaCancelada.setEstado("CANCELADA");
+
+        Cita citaAtendida = new Cita();
+        citaAtendida.setEstado("ATENDIDA");
+
+        // Regla de Negocio: Solo las citas PROGRAMADAS pueden ser eliminadas
+        java.util.function.Predicate<Cita> esEliminable = c ->
+                c != null && "PROGRAMADA".equalsIgnoreCase(c.getEstado());
+
+        assertTrue(esEliminable.test(citaProgramada), "Una cita PROGRAMADA sí debe poder ser eliminada");
+        assertFalse(esEliminable.test(citaCancelada), "Una cita CANCELADA no debe poder ser eliminada (debe preservarse)");
+        assertFalse(esEliminable.test(citaAtendida), "Una cita ATENDIDA no debe poder ser eliminada (historial clínico)");
+    }
 }

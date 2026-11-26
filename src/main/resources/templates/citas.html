@@ -50,7 +50,7 @@
 
                 <div class="metric-card">
                     <div>
-                        <div class="metric-label">PROGRAMADAS / PENDIENTES</div>
+                        <div class="metric-label">CITAS PROGRAMADAS</div>
                         <div class="metric-value" id="kpiPendientes">0</div>
                         <div class="metric-subtext">Próximos turnos</div>
                     </div>
@@ -156,7 +156,6 @@
                         <select id="filtroEstadoLista" class="filter-select" onchange="aplicarFiltrosLista()">
                             <option value="TODOS">Todos los estados</option>
                             <option value="PROGRAMADA">Solo Programadas</option>
-                            <option value="PENDIENTE">Solo Pendientes</option>
                             <option value="ATENDIDA">Solo Atendidas</option>
                             <option value="CANCELADA">Solo Canceladas</option>
                         </select>
@@ -249,7 +248,6 @@
                     <label for="inputEstado">Estado de la Cita</label>
                     <select id="inputEstado">
                         <option value="PROGRAMADA">PROGRAMADA</option>
-                        <option value="PENDIENTE">PENDIENTE</option>
                         <option value="ATENDIDA">ATENDIDA</option>
                         <option value="CANCELADA">CANCELADA</option>
                     </select>
@@ -696,16 +694,31 @@
                                     </svg>
                                 </button>
 
-                                <button class="btn-icon-action delete" title="Cancelar / Eliminar" onclick="eliminarCita(${c.id})">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <polyline points="3 6 5 6 21 6"></polyline>
-                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                    </svg>
-                                </button>
+                                ${estado === 'PROGRAMADA' ? `
+                                    <button class="btn-icon-action delete" title="Eliminar cita programada" onclick="eliminarCita(${c.id})">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        </svg>
+                                    </button>
+                                ` : ''}
                             </div>
                         </div>
                     `;
                 });
+
+                // Si alguna cita fue cancelada o si aún hay doctores disponibles, permitir agendar en este slot
+                const hayCancelada = citasEnSlot.some(c => (c.estado || '').toUpperCase() === 'CANCELADA');
+                const activasEnSlot = citasEnSlot.filter(c => (c.estado || '').toUpperCase() !== 'CANCELADA');
+                if (hayCancelada || activasEnSlot.length < (listaVeterinarios.length || 1)) {
+                    bodyHTML += `
+                        <div style="margin-top:6px;">
+                            <button class="btn-slot-available" style="padding:6px 12px; font-size:12px;" onclick="abrirModalCrearConHorario('${fechaAgendaSeleccionada}', '${horaSlot}')">
+                                + Agendar en esta hora (${hayCancelada ? 'Horario liberado por cita cancelada' : 'Otro médico disponible'})
+                            </button>
+                        </div>
+                    `;
+                }
             }
 
             row.innerHTML = `
@@ -886,12 +899,14 @@
                         </svg>
                     </button>
 
-                    <button class="btn-icon-action delete" title="Cancelar / Eliminar" onclick="eliminarCita(${c.id})">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                    </button>
+                    ${estado === 'PROGRAMADA' ? `
+                        <button class="btn-icon-action delete" title="Eliminar cita programada" onclick="eliminarCita(${c.id})">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    ` : ''}
                 </div>
             `;
 
@@ -1092,17 +1107,20 @@
     }
 
     async function eliminarCita(id) {
-        if (!confirm("¿Desea cancelar y eliminar esta cita de la agenda?")) return;
+        if (!confirm("¿Desea eliminar esta cita programada de la agenda?")) return;
 
         try {
             const resp = await fetch(`/api/citas/${id}`, { method: 'DELETE' });
+            const data = await resp.json();
             if (resp.ok) {
-                mostrarToast("Cita cancelada con éxito", "success");
+                mostrarToast(data.mensaje || "Cita programada eliminada con éxito", "success");
                 cargarCitas();
                 cargarEstadisticas();
+            } else {
+                mostrarToast(data.error || "Solo se permite eliminar citas en estado PROGRAMADA", "error");
             }
         } catch (e) {
-            mostrarToast("Error de conexión", "error");
+            mostrarToast("Error de conexión con el servidor", "error");
         }
     }
 

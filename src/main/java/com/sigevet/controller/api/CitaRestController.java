@@ -114,11 +114,29 @@ public class CitaRestController {
             return ResponseEntity.badRequest().body(Map.of("error", "El veterinario seleccionado no existe"));
         }
 
+        // Regla de Negocio: No permitir cruce de horarios para el mismo médico (salvo cita cancelada o médico diferente)
+        List<Cita> citasDelDoctor = citaRepository.findByVeterinarioIdAndFecha(veterinarioId, fecha);
+        boolean cruceHorario = citasDelDoctor.stream()
+                .filter(c -> c.getHora() != null && c.getHora().equals(hora))
+                .anyMatch(c -> !"CANCELADA".equalsIgnoreCase(c.getEstado()));
+
+        if (cruceHorario) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "El Dr. " + veterinario.getNombre() + " " + veterinario.getApellido() +
+                             " ya cuenta con una cita agendada en la fecha " + fecha + " a las " + hora + ". " +
+                             "Seleccione otro horario u otro médico disponible."
+            ));
+        }
+
+        String estadoFinal = (estado != null && !estado.trim().isEmpty() && !"PENDIENTE".equalsIgnoreCase(estado.trim()))
+                ? estado.trim().toUpperCase()
+                : "PROGRAMADA";
+
         Cita cita = new Cita();
         cita.setFecha(fecha);
         cita.setHora(hora);
         cita.setMotivo(motivo != null && !motivo.trim().isEmpty() ? motivo.trim() : "Consulta General");
-        cita.setEstado(estado != null && !estado.trim().isEmpty() ? estado.trim().toUpperCase() : "PROGRAMADA");
+        cita.setEstado(estadoFinal);
         cita.setMascota(mascota);
         cita.setVeterinario(veterinario);
 
@@ -142,6 +160,12 @@ public class CitaRestController {
             LocalDate nuevaFecha = (fechaStr != null && !fechaStr.trim().isEmpty()) ? LocalDate.parse(fechaStr.trim()) : cita.getFecha();
             LocalTime nuevaHora = (horaStr != null && !horaStr.trim().isEmpty()) ? LocalTime.parse(horaStr.trim()) : cita.getHora();
             String nuevoEstado = (estado != null && !estado.trim().isEmpty()) ? estado.trim().toUpperCase() : cita.getEstado();
+            if ("PENDIENTE".equalsIgnoreCase(nuevoEstado)) {
+                nuevoEstado = "PROGRAMADA";
+            }
+
+            Integer nuevoVetId = (veterinarioIdObj != null) ? Integer.parseInt(veterinarioIdObj.toString())
+                    : (cita.getVeterinario() != null ? cita.getVeterinario().getId() : null);
 
             // Si la cita se mantiene o programa en estado activo, validar no retroactividad ante cambios de fecha/hora
             if (!"ATENDIDA".equalsIgnoreCase(nuevoEstado) && !"CANCELADA".equalsIgnoreCase(nuevoEstado)) {
@@ -153,6 +177,24 @@ public class CitaRestController {
                 }
             }
 
+            // Validar cruce de horario si la cita permanece activa (no cancelada)
+            if (!"CANCELADA".equalsIgnoreCase(nuevoEstado) && nuevoVetId != null) {
+                List<Cita> citasDelDoctor = citaRepository.findByVeterinarioIdAndFecha(nuevoVetId, nuevaFecha);
+                boolean cruceHorario = citasDelDoctor.stream()
+                        .filter(c -> !c.getId().equals(id))
+                        .filter(c -> c.getHora() != null && c.getHora().equals(nuevaHora))
+                        .anyMatch(c -> !"CANCELADA".equalsIgnoreCase(c.getEstado()));
+
+                if (cruceHorario) {
+                    Usuario vetDoc = usuarioRepository.findById(nuevoVetId).orElse(null);
+                    String nomVet = (vetDoc != null) ? "Dr. " + vetDoc.getNombre() + " " + vetDoc.getApellido() : "El médico";
+                    return ResponseEntity.badRequest().body(Map.of(
+                            "error", nomVet + " ya cuenta con una cita agendada en la fecha " + nuevaFecha + " a las " + nuevaHora + ". " +
+                                     "Seleccione otro horario u otro médico disponible."
+                    ));
+                }
+            }
+
             cita.setFecha(nuevaFecha);
             cita.setHora(nuevaHora);
             cita.setEstado(nuevoEstado);
@@ -160,16 +202,12 @@ public class CitaRestController {
             if (motivo != null) {
                 cita.setMotivo(motivo.trim());
             }
-            if (estado != null && !estado.trim().isEmpty()) {
-                cita.setEstado(estado.trim().toUpperCase());
-            }
             if (mascotaIdObj != null) {
                 Integer mascotaId = Integer.parseInt(mascotaIdObj.toString());
                 mascotaRepository.findById(mascotaId).ifPresent(cita::setMascota);
             }
-            if (veterinarioIdObj != null) {
-                Integer vetId = Integer.parseInt(veterinarioIdObj.toString());
-                usuarioRepository.findById(vetId).ifPresent(cita::setVeterinario);
+            if (nuevoVetId != null) {
+                usuarioRepository.findById(nuevoVetId).ifPresent(cita::setVeterinario);
             }
 
             Cita actualizada = citaRepository.save(cita);
@@ -187,8 +225,10 @@ public class CitaRestController {
             return ResponseEntity.badRequest().body(Map.of("error", "Debe indicar el nuevo estado"));
         }
 
+        String estadoLimpio = "PENDIENTE".equalsIgnoreCase(nuevoEstado.trim()) ? "PROGRAMADA" : nuevoEstado.trim().toUpperCase();
+
         return citaRepository.findById(id).map(cita -> {
-            cita.setEstado(nuevoEstado.trim().toUpperCase());
+            cita.setEstado(estadoLimpio);
             Cita actualizada = citaRepository.save(cita);
             return ResponseEntity.ok(convertirADTO(actualizada));
         }).orElse(ResponseEntity.notFound().build());
@@ -200,11 +240,19 @@ public class CitaRestController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminarCita(@PathVariable Integer id) {
         return citaRepository.findById(id).map(cita -> {
+            // Regla de Negocio: Solo permitir eliminar citas en estado PROGRAMADA (no canceladas ni atendidas)
+            if (!"PROGRAMADA".equalsIgnoreCase(cita.getEstado())) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "Solo se permite eliminar citas en estado PROGRAMADA. Las citas con estado " +
+                                 cita.getEstado() + " deben conservarse en el registro histórico."
+                ));
+            }
+
             cita.setActivo(false);
             cita.setFechaEliminacion(LocalDateTime.now());
             cita.setUsuarioEliminacion(AuditoriaUtil.getUsuarioActual());
             citaRepository.save(cita);
-            return ResponseEntity.ok(Map.of("mensaje", "Cita cancelada y eliminada lógicamente con éxito", "id", id));
+            return ResponseEntity.ok(Map.of("mensaje", "Cita programada eliminada con éxito", "id", id));
         }).orElse(ResponseEntity.notFound().build());
     }
 

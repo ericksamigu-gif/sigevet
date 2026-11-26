@@ -243,18 +243,26 @@
                 const container = document.getElementById('toastContainer');
                 if (!container) return;
                 const toast = document.createElement('div');
-                toast.className = `toast-notif toast-${tipo}`;
+                toast.className = `toast ${tipo}`;
                 let icono = 'ℹ️';
                 if (tipo === 'success') icono = '✅';
                 if (tipo === 'error') icono = '⚠️';
-                toast.innerHTML = `<span style="font-size:16px;">${icono}</span> <span>${mensaje}</span>`;
+                toast.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:16px;">${icono}</span>
+                        <span>${mensaje}</span>
+                    </div>
+                    <span style="cursor:pointer; margin-left:12px; font-size:16px; font-weight:bold; color:#64748b;" onclick="this.parentElement.remove()">&times;</span>
+                `;
                 container.appendChild(toast);
                 setTimeout(() => {
-                    toast.style.opacity = '0';
-                    toast.style.transform = 'translateY(10px)';
-                    toast.style.transition = 'all 0.3s ease';
-                    setTimeout(() => toast.remove(), 300);
-                }, 4000);
+                    if (toast.parentElement) {
+                        toast.style.opacity = '0';
+                        toast.style.transform = 'translateY(10px)';
+                        toast.style.transition = 'all 0.3s ease';
+                        setTimeout(() => toast.remove(), 300);
+                    }
+                }, 3500);
             };
         }
     </script>

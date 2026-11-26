@@ -114,7 +114,7 @@ public class CitaRestController {
             return ResponseEntity.badRequest().body(Map.of("error", "El veterinario seleccionado no existe"));
         }
 
-        // Regla de Negocio: No permitir cruce de horarios para el mismo médico (salvo cita cancelada o médico diferente)
+        // Regla de Negocio (RN-04): No permitir cruce de horarios para el mismo médico (salvo cita cancelada o médico diferente)
         List<Cita> citasDelDoctor = citaRepository.findByVeterinarioIdAndFecha(veterinarioId, fecha);
         boolean cruceHorario = citasDelDoctor.stream()
                 .filter(c -> c.getHora() != null && c.getHora().equals(hora))
@@ -125,6 +125,19 @@ public class CitaRestController {
                     "error", "El Dr. " + veterinario.getNombre() + " " + veterinario.getApellido() +
                              " ya cuenta con una cita agendada en la fecha " + fecha + " a las " + hora + ". " +
                              "Seleccione otro horario u otro médico disponible."
+            ));
+        }
+
+        // Regla de Negocio (RN-02): No solapamiento de paciente (un mismo paciente no puede tener 2 citas activas en la misma fecha y hora)
+        List<Cita> citasDeMascota = citaRepository.findByMascotaIdAndFecha(mascotaId, fecha);
+        boolean cruceMascota = citasDeMascota.stream()
+                .filter(c -> c.getHora() != null && c.getHora().equals(hora))
+                .anyMatch(c -> !"CANCELADA".equalsIgnoreCase(c.getEstado()));
+
+        if (cruceMascota) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "La mascota paciente '" + mascota.getNombre() + "' ya tiene otra cita activa agendada en la fecha " +
+                             fecha + " a las " + hora + ". No es posible solapar la atención del mismo paciente."
             ));
         }
 
@@ -177,7 +190,14 @@ public class CitaRestController {
                 }
             }
 
-            // Validar cruce de horario si la cita permanece activa (no cancelada)
+            // Regla de Negocio (RN-09): Edición restringida para citas Atendidas
+            if ("ATENDIDA".equalsIgnoreCase(cita.getEstado()) && (!nuevaFecha.equals(cita.getFecha()) || !nuevaHora.equals(cita.getHora()))) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "Una cita que ya fue ATENDIDA no puede cambiar de fecha u hora para mantener la integridad de la historia clínica."
+                ));
+            }
+
+            // Validar cruce de horario del doctor si la cita permanece activa (no cancelada)
             if (!"CANCELADA".equalsIgnoreCase(nuevoEstado) && nuevoVetId != null) {
                 List<Cita> citasDelDoctor = citaRepository.findByVeterinarioIdAndFecha(nuevoVetId, nuevaFecha);
                 boolean cruceHorario = citasDelDoctor.stream()
@@ -191,6 +211,22 @@ public class CitaRestController {
                     return ResponseEntity.badRequest().body(Map.of(
                             "error", nomVet + " ya cuenta con una cita agendada en la fecha " + nuevaFecha + " a las " + nuevaHora + ". " +
                                      "Seleccione otro horario u otro médico disponible."
+                    ));
+                }
+            }
+
+            // Regla de Negocio (RN-02): Validar cruce de horario del paciente (mascota)
+            Integer targetMascotaId = mascotaIdObj != null ? Integer.parseInt(mascotaIdObj.toString()) : (cita.getMascota() != null ? cita.getMascota().getId() : null);
+            if (!"CANCELADA".equalsIgnoreCase(nuevoEstado) && targetMascotaId != null) {
+                List<Cita> citasDeMascota = citaRepository.findByMascotaIdAndFecha(targetMascotaId, nuevaFecha);
+                boolean cruceMascota = citasDeMascota.stream()
+                        .filter(c -> !c.getId().equals(id))
+                        .filter(c -> c.getHora() != null && c.getHora().equals(nuevaHora))
+                        .anyMatch(c -> !"CANCELADA".equalsIgnoreCase(c.getEstado()));
+
+                if (cruceMascota) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                            "error", "El paciente ya cuenta con otra cita activa en la fecha " + nuevaFecha + " a las " + nuevaHora + ". No se permite solapar horarios del mismo paciente."
                     ));
                 }
             }

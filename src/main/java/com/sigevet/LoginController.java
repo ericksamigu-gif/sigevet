@@ -65,7 +65,11 @@ public class LoginController {
             HttpSession session,
             Model model) {
 
-        Usuario usuario = usuarioRepository.findByUsername(username.trim());
+        if (username != null) {
+            model.addAttribute("username", username.trim());
+        }
+
+        Usuario usuario = usuarioRepository.findByUsername(username != null ? username.trim() : "");
 
         if (usuario == null) {
             model.addAttribute("error", "El usuario ingresado no existe.");
@@ -76,13 +80,6 @@ public class LoginController {
             model.addAttribute("error", "El usuario se encuentra inactivo. Contacte al administrador.");
             return "login";
         }
-
-        /*
-        if (!usuario.getPassword().equals(password)) {
-            model.addAttribute("error", "Contraseña incorrecta.");
-            return "login";
-        }
-        */
         
         if (!passwordEncoder.matches(password, usuario.getPassword())) {
             model.addAttribute("error", "Contraseña incorrecta.");

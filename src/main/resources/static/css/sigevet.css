@@ -1168,7 +1168,7 @@ tr:hover td {
    ========================================================================== */
 .toast-container {
     position: fixed;
-    top: 24px;
+    top: 85px;
     right: 24px;
     z-index: 2000;
     display: flex;

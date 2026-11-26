@@ -26,6 +26,8 @@ public interface CitaRepository extends JpaRepository<Cita, Integer> {
 
     List<Cita> findByVeterinarioIdAndFecha(Integer veterinarioId, LocalDate fecha);
 
+    List<Cita> findByMascotaIdAndFecha(Integer mascotaId, LocalDate fecha);
+
     @Query("SELECT c FROM Cita c LEFT JOIN c.mascota m LEFT JOIN c.veterinario v LEFT JOIN m.cliente cl WHERE " +
            "(:filtro IS NULL OR :filtro = '' OR " +
            "LOWER(m.nombre) LIKE LOWER(CONCAT('%', :filtro, '%')) OR " +

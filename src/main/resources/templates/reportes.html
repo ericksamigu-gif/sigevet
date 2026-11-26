@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/layout :: head('Reportes del Negocio - SIGEVET')}"></head>
+
+<body>
+
+    <!-- MENÚ LATERAL PERSISTENTE -->
+    <aside th:replace="~{fragments/layout :: sidebar('reportes')}"></aside>
+
+    <!-- ÁREA DE CONTENIDO PRINCIPAL -->
+    <div class="main-wrapper">
+
+        <!-- BARRA SUPERIOR DE NAVEGACIÓN -->
+        <header th:replace="~{fragments/layout :: topbar('Filtrar atenciones o pacientes en el reporte...')}"></header>
+
+        <!-- CONTENIDO DE LA PÁGINA -->
+        <main class="content-body" id="areaReportesPantalla">
+
+            <!-- TÍTULO Y ACCIONES DE CABECERA -->
+            <div class="page-header-row">
+                <div class="page-title-group">
+                    <h1>Reportes del Negocio y Flujo Clínico</h1>
+                    <p>Métricas gerenciales de citas atendidas, tasa de efectividad y análisis de afluencia semanal de pacientes (RF-06).</p>
+                </div>
+
+                <div class="header-actions">
+                    <button class="btn-primary" onclick="imprimirReporte()" style="display:inline-flex; align-items:center; gap:8px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                            <rect x="6" y="14" width="12" height="8"></rect>
+                        </svg>
+                        Imprimir / Exportar Reporte A4
+                    </button>
+                </div>
+            </div>
+
+            <!-- BARRA DE FILTROS Y PARÁMETROS DEL REPORTE -->
+            <div class="table-search-bar" style="background:white; padding:18px 22px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:24px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px;">
+                    <!-- Botones de Acceso Rápido Temporal -->
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <span style="font-size:12px; font-weight:700; color:#64748b; text-transform:uppercase;">Período:</span>
+                        <button type="button" class="btn-preset active" id="btnPreset7Dias" onclick="aplicarPreset('7dias')">Últimos 7 días</button>
+                        <button type="button" class="btn-preset" id="btnPresetMes" onclick="aplicarPreset('esteMes')">Este Mes</button>
+                        <button type="button" class="btn-preset" id="btnPresetHoy" onclick="aplicarPreset('hoy')">Hoy</button>
+                        <button type="button" class="btn-preset" id="btnPreset30Dias" onclick="aplicarPreset('30dias')">Últimos 30 días</button>
+                    </div>
+
+                    <!-- Selectores de Fecha y Veterinario -->
+                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <label for="fechaInicio" style="font-size:12px; font-weight:700; color:#475569;">Desde:</label>
+                            <input type="date" id="fechaInicio" style="padding:7px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px; outline:none;">
+                        </div>
+
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <label for="fechaFin" style="font-size:12px; font-weight:700; color:#475569;">Hasta:</label>
+                            <input type="date" id="fechaFin" style="padding:7px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px; outline:none;">
+                        </div>
+
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <label for="filtroVeterinario" style="font-size:12px; font-weight:700; color:#475569;">Doctor:</label>
+                            <select id="filtroVeterinario" style="padding:7px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px; outline:none; background:#fff;">
+                                <option value="">Todos los médicos</option>
+                            </select>
+                        </div>
+
+                        <button type="button" class="btn-primary" onclick="cargarReporte()" style="padding:8px 16px; font-size:13px;">
+                            🔍 Consultar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TARJETAS MÉTRICAS EJECUTIVAS (KPIS) -->
+            <section class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">CITAS ATENDIDAS</span>
+                        <span class="metric-value" id="kpiAtendidas">0</span>
+                        <span class="metric-subtext" id="kpiTasaCumplimiento">0% de cumplimiento</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-green">🩺</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">TOTAL PROGRAMADAS</span>
+                        <span class="metric-value" id="kpiTotalCitas">0</span>
+                        <span class="metric-subtext" id="kpiDetalleEstados">0 pendientes | 0 canceladas</span>
+                    </div>
+                    <div class="metric-icon-wrap icon-blue">📅</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">PACIENTES ÚNICOS</span>
+                        <span class="metric-value" id="kpiPacientesUnicos">0</span>
+                        <span class="metric-subtext">Mascotas atendidas</span>
+                    </div>
+                    <div class="metric-icon-wrap" style="background:#ede9fe; color:#6d28d9;">🐾</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-info">
+                        <span class="metric-label">MÉDICO CON MÁS ATENCIONES</span>
+                        <span class="metric-value" id="kpiDoctorDestacado" style="font-size:16px; font-weight:800; line-height:1.3; margin-top:4px;">--</span>
+                        <span class="metric-subtext">Liderazgo en consultas</span>
+                    </div>
+                    <div class="metric-icon-wrap" style="background:#fef3c7; color:#d97706;">👑</div>
+                </div>
+            </section>
+
+            <!-- PANELES ANALÍTICOS (FLUJO SEMANAL Y ESPECIES) -->
+            <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px; margin-bottom:24px;">
+
+                <!-- PANEL 1: FLUJO DE PACIENTES POR DÍA DE LA SEMANA -->
+                <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <div>
+                            <h3 style="font-size:16px; font-weight:800; color:#0f172a; margin:0;">📊 Flujo Semanal de Pacientes</h3>
+                            <span style="font-size:12px; color:#64748b;">Distribución de citas y consultas por día de la semana (Lunes a Domingo)</span>
+                        </div>
+                        <span style="font-size:11px; font-weight:700; color:#0f766e; background:#f0fdf4; border:1px solid #bbf7d0; padding:3px 8px; border-radius:6px;">
+                            Trazabilidad Clínica
+                        </span>
+                    </div>
+
+                    <!-- Gráfico de barras visuales -->
+                    <div id="contenedorFlujoSemanal" style="display:flex; flex-direction:column; gap:12px;">
+                        <!-- Se llena dinámicamente con barras de progreso -->
+                    </div>
+                </div>
+
+                <!-- PANEL 2: DISTRIBUCIÓN POR ESPECIE Y EFECTIVIDAD -->
+                <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.04); display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <h3 style="font-size:16px; font-weight:800; color:#0f172a; margin:0 0 4px 0;">🐶 Pacientes por Especie</h3>
+                        <span style="font-size:12px; color:#64748b;">Distribución de pacientes atendidos</span>
+
+                        <div style="margin-top:20px; display:flex; flex-direction:column; gap:14px;">
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700; color:#334155; margin-bottom:4px;">
+                                    <span>🐕 Caninos (Perros)</span>
+                                    <span id="cantCaninos">0</span>
+                                </div>
+                                <div style="width:100%; height:8px; background:#f1f5f9; border-radius:999px; overflow:hidden;">
+                                    <div id="barCaninos" style="width:0%; height:100%; background:#0f766e; border-radius:999px; transition:width 0.4s ease;"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700; color:#334155; margin-bottom:4px;">
+                                    <span>🐈 Felinos (Gatos)</span>
+                                    <span id="cantFelinos">0</span>
+                                </div>
+                                <div style="width:100%; height:8px; background:#f1f5f9; border-radius:999px; overflow:hidden;">
+                                    <div id="barFelinos" style="width:0%; height:100%; background:#0284c7; border-radius:999px; transition:width 0.4s ease;"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700; color:#334155; margin-bottom:4px;">
+                                    <span>🐇 Otras Especies</span>
+                                    <span id="cantOtros">0</span>
+                                </div>
+                                <div style="width:100%; height:8px; background:#f1f5f9; border-radius:999px; overflow:hidden;">
+                                    <div id="barOtros" style="width:0%; height:100%; background:#8b5cf6; border-radius:999px; transition:width 0.4s ease;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px dashed #cbd5e1; margin-top:20px; font-size:12px; color:#475569;">
+                        <strong>Nota de Gestión:</strong> Los reportes emitidos se auditan automáticamente bajo la norma de trazabilidad en la tabla <code>reporte</code>.
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- TABLA DETALLADA DE CITAS Y ATENCIONES DEL PERÍODO -->
+            <div style="background:white; border-radius:12px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                <div style="padding:16px 20px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h3 style="font-size:16px; font-weight:800; color:#0f172a; margin:0;">📋 Detalle de Citas y Atenciones en el Período</h3>
+                        <span style="font-size:12px; color:#64748b;">Desglose cronológico de atenciones, pacientes y doctores asignados</span>
+                    </div>
+                    <div style="font-size:13px; font-weight:700; color:#64748b;">
+                        Total: <span id="contadorDetalle" style="color:#0f766e; font-weight:800;">0</span> registros
+                    </div>
+                </div>
+
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 130px;">FECHA / HORA</th>
+                            <th>PACIENTE</th>
+                            <th>PROPIETARIO</th>
+                            <th>MÉDICO VETERINARIO</th>
+                            <th>MOTIVO / EVALUACIÓN</th>
+                            <th style="text-align: right; width: 120px;">ESTADO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaDetalleCuerpo">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px; color: #94a3b8;">
+                                <div class="spinner" style="margin: 0 auto 12px auto;"></div>
+                                Cargando información del reporte...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ================= CONTENEDOR OCULTO PARA IMPRESIÓN OFICIAL A4 ================= -->
+    <div id="seccionImpresionA4" style="display:none;">
+        <div style="padding:30px; font-family:'Plus Jakarta Sans', sans-serif; color:#0f172a; max-width:800px; margin:0 auto;">
+            <!-- Membrete Oficial -->
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #0f766e; padding-bottom:16px; margin-bottom:20px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:48px; height:48px; background:#0f766e; color:white; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:26px;">🐾</div>
+                    <div>
+                        <h2 style="font-size:22px; font-weight:800; color:#0f766e; margin:0; letter-spacing:-0.5px;">CLÍNICA VETERINARIA SIGEVET</h2>
+                        <div style="font-size:11px; color:#64748b; font-weight:600;">SISTEMA INTEGRAL DE GESTIÓN VETERINARIA | RUC: 20601234567</div>
+                        <div style="font-size:11px; color:#64748b;">Av. Principal 123, Lima - Perú | Central: (01) 748-5960</div>
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <span style="display:inline-block; background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800; text-transform:uppercase;">
+                        INFORME GERENCIAL
+                    </span>
+                    <div style="font-size:11px; color:#64748b; margin-top:4px;" id="printFechaGeneracion">Fecha: --</div>
+                    <div style="font-size:11px; color:#64748b;" id="printUsuarioEmisor">Emitido por: Administrador</div>
+                </div>
+            </div>
+
+            <!-- Título y Parámetros -->
+            <div style="text-align:center; margin-bottom:24px;">
+                <h3 style="font-size:18px; font-weight:800; color:#0f172a; margin:0 0 6px 0; text-transform:uppercase;">Reporte de Citas Atendidas y Flujo de Pacientes</h3>
+                <div style="font-size:13px; color:#475569;" id="printRangoFechas">Período evaluado: Del -- al --</div>
+            </div>
+
+            <!-- Resumen Ejecutivo de Métricas -->
+            <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:12px;">
+                <thead>
+                    <tr style="background:#f8fafc; border:1px solid #e2e8f0;">
+                        <th style="padding:10px; text-align:center; border:1px solid #e2e8f0;">Total Citas</th>
+                        <th style="padding:10px; text-align:center; border:1px solid #e2e8f0; color:#15803d;">Atendidas</th>
+                        <th style="padding:10px; text-align:center; border:1px solid #e2e8f0; color:#b45309;">Pendientes</th>
+                        <th style="padding:10px; text-align:center; border:1px solid #e2e8f0; color:#b91c1c;">Canceladas</th>
+                        <th style="padding:10px; text-align:center; border:1px solid #e2e8f0;">Efectividad</th>
+                        <th style="padding:10px; text-align:center; border:1px solid #e2e8f0;">Pacientes Únicos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="text-align:center; font-weight:700;">
+                        <td style="padding:10px; border:1px solid #e2e8f0;" id="printTotalCitas">0</td>
+                        <td style="padding:10px; border:1px solid #e2e8f0; color:#15803d;" id="printAtendidas">0</td>
+                        <td style="padding:10px; border:1px solid #e2e8f0; color:#b45309;" id="printPendientes">0</td>
+                        <td style="padding:10px; border:1px solid #e2e8f0; color:#b91c1c;" id="printCanceladas">0</td>
+                        <td style="padding:10px; border:1px solid #e2e8f0;" id="printTasaCumplimiento">0%</td>
+                        <td style="padding:10px; border:1px solid #e2e8f0;" id="printPacientesUnicos">0</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Tabla de Flujo por Día y Especies -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:20px;">
+                <table style="width:100%; border-collapse:collapse; font-size:11px; border:1px solid #e2e8f0;">
+                    <thead>
+                        <tr style="background:#f8fafc;"><th colspan="2" style="padding:8px; text-align:left; border-bottom:1px solid #e2e8f0;">Afluencia por Día de Semana</th></tr>
+                    </thead>
+                    <tbody id="printTablaDias"></tbody>
+                </table>
+
+                <table style="width:100%; border-collapse:collapse; font-size:11px; border:1px solid #e2e8f0;">
+                    <thead>
+                        <tr style="background:#f8fafc;"><th colspan="2" style="padding:8px; text-align:left; border-bottom:1px solid #e2e8f0;">Distribución de Especies</th></tr>
+                    </thead>
+                    <tbody id="printTablaEspecies"></tbody>
+                </table>
+            </div>
+
+            <!-- Listado Detallado para Impresión -->
+            <div style="margin-bottom:30px;">
+                <h4 style="font-size:13px; font-weight:800; color:#0f172a; margin:0 0 8px 0; text-transform:uppercase;">Registro Detallado de Atenciones Clínicas:</h4>
+                <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                    <thead>
+                        <tr style="background:#f1f5f9; border-top:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1;">
+                            <th style="padding:6px; text-align:left;">Fecha/Hora</th>
+                            <th style="padding:6px; text-align:left;">Paciente</th>
+                            <th style="padding:6px; text-align:left;">Propietario</th>
+                            <th style="padding:6px; text-align:left;">Doctor Asignado</th>
+                            <th style="padding:6px; text-align:left;">Motivo / Diagnóstico</th>
+                            <th style="padding:6px; text-align:right;">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="printTablaDetalle"></tbody>
+                </table>
+            </div>
+
+            <!-- Firmas y Certificación -->
+            <div style="display:flex; justify-content:space-between; margin-top:50px; padding-top:20px; page-break-inside:avoid;">
+                <div style="text-align:center; width:220px;">
+                    <div style="border-top:1px solid #94a3b8; padding-top:8px; font-size:11px;">
+                        <strong>Firma del Administrador</strong><br>
+                        <span style="color:#64748b;">Gestión y Control SIGEVET</span>
+                    </div>
+                </div>
+                <div style="text-align:center; width:220px;">
+                    <div style="border-top:1px solid #94a3b8; padding-top:8px; font-size:11px;">
+                        <strong>Sello de Dirección Médica</strong><br>
+                        <span style="color:#64748b;">Colegio Médico Veterinario del Perú</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR DE NOTIFICACIONES TOAST -->
+    <div th:replace="~{fragments/layout :: toastContainer}"></div>
+
+    <!-- ESTILOS ESPECÍFICOS DEL MÓDULO DE REPORTES -->
+    <style>
+        .btn-preset {
+            padding: 6px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #f8fafc;
+            color: #475569;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-preset:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        .btn-preset.active {
+            background: #0f766e;
+            color: white;
+            border-color: #0f766e;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #seccionImpresionA4, #seccionImpresionA4 * {
+                visibility: visible;
+            }
+            #seccionImpresionA4 {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            .sidebar, .top-navbar, .page-header-row, .table-search-bar, .toast-container {
+                display: none !important;
+            }
+        }
+    </style>
+
+    <!-- ================= JAVASCRIPT DINÁMICO ================= -->
+    <script th:inline="javascript">
+        let datosReporteActual = null;
+        let listaDoctores = [];
+        const usuarioSesion = /*[[${usuario != null ? usuario.nombre + ' ' + usuario.apellido : 'Administrador'}]]*/ 'Administrador';
+
+        document.addEventListener("DOMContentLoaded", () => {
+            aplicarPreset('7dias');
+            cargarVeterinariosCombo();
+        });
+
+        // Búsqueda desde la barra superior
+        function filtrarGlobal(texto) {
+            if (!datosReporteActual || !datosReporteActual.detalle) return;
+            const q = (texto || '').toLowerCase().trim();
+            const filtrados = datosReporteActual.detalle.filter(d => 
+                (d.mascotaNombre && d.mascotaNombre.toLowerCase().includes(q)) ||
+                (d.clienteNombre && d.clienteNombre.toLowerCase().includes(q)) ||
+                (d.veterinarioNombre && d.veterinarioNombre.toLowerCase().includes(q)) ||
+                (d.motivo && d.motivo.toLowerCase().includes(q)) ||
+                (d.estado && d.estado.toLowerCase().includes(q))
+            );
+            renderizarTablaDetalle(filtrados);
+        }
+
+        function aplicarPreset(tipo) {
+            document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+
+            const hoy = new Date();
+            const fFinStr = hoy.toISOString().split('T')[0];
+            let fInicio = new Date();
+
+            if (tipo === 'hoy') {
+                document.getElementById('btnPresetHoy').classList.add('active');
+            } else if (tipo === '7dias') {
+                document.getElementById('btnPreset7Dias').classList.add('active');
+                fInicio.setDate(hoy.getDate() - 6);
+            } else if (tipo === 'esteMes') {
+                document.getElementById('btnPresetMes').classList.add('active');
+                fInicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            } else if (tipo === '30dias') {
+                document.getElementById('btnPreset30Dias').classList.add('active');
+                fInicio.setDate(hoy.getDate() - 29);
+            }
+
+            const fInicioStr = fInicio.toISOString().split('T')[0];
+            document.getElementById('fechaInicio').value = fInicioStr;
+            document.getElementById('fechaFin').value = fFinStr;
+
+            cargarReporte();
+        }
+
+        async function cargarVeterinariosCombo() {
+            try {
+                const resp = await fetch('/api/citas/veterinarios');
+                if (resp.ok) {
+                    listaDoctores = await resp.json();
+                    const sel = document.getElementById('filtroVeterinario');
+                    listaDoctores.forEach(v => {
+                        const opt = document.createElement('option');
+                        opt.value = v.id;
+                        opt.textContent = `Dr. ${v.nombre} ${v.apellido}`;
+                        sel.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error("Error al cargar veterinarios", e);
+            }
+        }
+
+        async function cargarReporte() {
+            const fInicio = document.getElementById('fechaInicio').value;
+            const fFin = document.getElementById('fechaFin').value;
+            const vetId = document.getElementById('filtroVeterinario').value;
+
+            let url = `/api/reportes/resumen?fechaInicio=${fInicio}&fechaFin=${fFin}`;
+            if (vetId) url += `&veterinarioId=${vetId}`;
+
+            try {
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error("Error en respuesta del servidor");
+
+                datosReporteActual = await resp.json();
+                renderizarDashboard(datosReporteActual);
+            } catch (error) {
+                console.error("Error al cargar reporte:", error);
+                mostrarToast("No se pudo cargar la información del reporte", "error");
+            }
+        }
+
+        function renderizarDashboard(data) {
+            // 1. Métricas KPIs
+            document.getElementById('kpiAtendidas').textContent = data.atendidas || 0;
+            document.getElementById('kpiTasaCumplimiento').textContent = `${data.tasaCumplimiento || 0}% de efectividad médica`;
+            document.getElementById('kpiTotalCitas').textContent = data.totalCitas || 0;
+            document.getElementById('kpiDetalleEstados').textContent = `${data.pendientes || 0} pendientes | ${data.canceladas || 0} canceladas`;
+            document.getElementById('kpiPacientesUnicos').textContent = data.pacientesUnicos || 0;
+            document.getElementById('kpiDoctorDestacado').textContent = data.doctorDestacado || 'Sin atenciones';
+
+            // 2. Flujo Semanal (Barras de afluencia)
+            const flujoCont = document.getElementById('contenedorFlujoSemanal');
+            flujoCont.innerHTML = '';
+            if (data.flujoSemanal && data.flujoSemanal.length > 0) {
+                data.flujoSemanal.forEach(f => {
+                    const row = document.createElement('div');
+                    row.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700; color:#334155; margin-bottom:4px;">
+                            <span>${f.dia}</span>
+                            <span style="color:#0f766e;">${f.cantidad} citas (${f.porcentaje}%)</span>
+                        </div>
+                        <div style="width:100%; height:9px; background:#f1f5f9; border-radius:999px; overflow:hidden;">
+                            <div style="width:${Math.max(f.porcentaje, 4)}%; height:100%; background:${f.cantidad > 0 ? '#0f766e' : '#cbd5e1'}; border-radius:999px; transition:width 0.4s ease;"></div>
+                        </div>
+                    `;
+                    flujoCont.appendChild(row);
+                });
+            }
+
+            // 3. Distribución por especie
+            const caninos = data.distribucionEspecies ? (data.distribucionEspecies.caninos || 0) : 0;
+            const felinos = data.distribucionEspecies ? (data.distribucionEspecies.felinos || 0) : 0;
+            const otros = data.distribucionEspecies ? (data.distribucionEspecies.otros || 0) : 0;
+            const totEsp = Math.max(caninos + felinos + otros, 1);
+
+            document.getElementById('cantCaninos').textContent = `${caninos} (${Math.round((caninos/totEsp)*100)}%)`;
+            document.getElementById('cantFelinos').textContent = `${felinos} (${Math.round((felinos/totEsp)*100)}%)`;
+            document.getElementById('cantOtros').textContent = `${otros} (${Math.round((otros/totEsp)*100)}%)`;
+
+            document.getElementById('barCaninos').style.width = `${Math.round((caninos/totEsp)*100)}%`;
+            document.getElementById('barFelinos').style.width = `${Math.round((felinos/totEsp)*100)}%`;
+            document.getElementById('barOtros').style.width = `${Math.round((otros/totEsp)*100)}%`;
+
+            // 4. Tabla Detallada
+            renderizarTablaDetalle(data.detalle || []);
+        }
+
+        function renderizarTablaDetalle(lista) {
+            const tbody = document.getElementById('tablaDetalleCuerpo');
+            tbody.innerHTML = '';
+            document.getElementById('contadorDetalle').textContent = lista.length;
+
+            if (lista.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align:center; padding:36px; color:#94a3b8;">
+                            No se registraron citas ni atenciones en el período y filtros seleccionados.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            lista.forEach(item => {
+                const tr = document.createElement('tr');
+
+                let badgeClass = 'pill-programada';
+                let est = (item.estado || 'PROGRAMADA').toUpperCase();
+                if (est === 'ATENDIDA') badgeClass = 'pill-atendida';
+                else if (est === 'CANCELADA') badgeClass = 'pill-cancelada';
+                else if (est === 'PENDIENTE') badgeClass = 'pill-pendiente';
+
+                tr.innerHTML = `
+                    <td>
+                        <strong style="color:#0f172a; font-size:13px;">${item.fecha || ''}</strong>
+                        <div style="font-size:12px; color:#64748b;">${item.hora || '--:--'}</div>
+                    </td>
+                    <td>
+                        <strong style="color:#0f172a; font-size:14px;">${item.mascotaNombre}</strong>
+                        <span style="font-size:12px; color:#64748b;">(${item.mascotaEspecie})</span>
+                    </td>
+                    <td style="color:#334155; font-size:13px;">
+                        ${item.clienteNombre}
+                    </td>
+                    <td style="color:#0f766e; font-weight:600; font-size:13px;">
+                        ${item.veterinarioNombre}
+                    </td>
+                    <td style="color:#475569; font-size:13px; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${item.motivo}">
+                        ${item.motivo}
+                    </td>
+                    <td style="text-align:right;">
+                        <span class="badge-status-pill ${badgeClass}">● ${est}</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function imprimirReporte() {
+            if (!datosReporteActual) {
+                mostrarToast("Cargue los datos antes de imprimir", "error");
+                return;
+            }
+
+            // Registrar auditoría en base de datos
+            try {
+                fetch('/api/reportes/registrar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        titulo: `Reporte de Gestión (${datosReporteActual.fechaInicio} al ${datosReporteActual.fechaFin})`,
+                        tipoReporte: 'GERENCIAL_CITAS'
+                    })
+                });
+            } catch (e) {
+                console.error("Auditoría no guardada", e);
+            }
+
+            // Llenar sección A4 de impresión
+            const hoyAhora = new Date().toLocaleString('es-PE', { dateStyle:'short', timeStyle:'short' });
+            document.getElementById('printFechaGeneracion').textContent = `Generado: ${hoyAhora}`;
+            document.getElementById('printUsuarioEmisor').textContent = `Responsable: ${usuarioSesion}`;
+            document.getElementById('printRangoFechas').textContent = `Período auditado: Del ${datosReporteActual.fechaInicio} al ${datosReporteActual.fechaFin}`;
+
+            document.getElementById('printTotalCitas').textContent = datosReporteActual.totalCitas || 0;
+            document.getElementById('printAtendidas').textContent = datosReporteActual.atendidas || 0;
+            document.getElementById('printPendientes').textContent = datosReporteActual.pendientes || 0;
+            document.getElementById('printCanceladas').textContent = datosReporteActual.canceladas || 0;
+            document.getElementById('printTasaCumplimiento').textContent = `${datosReporteActual.tasaCumplimiento || 0}%`;
+            document.getElementById('printPacientesUnicos').textContent = datosReporteActual.pacientesUnicos || 0;
+
+            // Tabla días
+            const tDias = document.getElementById('printTablaDias');
+            tDias.innerHTML = '';
+            (datosReporteActual.flujoSemanal || []).forEach(d => {
+                tDias.innerHTML += `<tr><td style="padding:4px 8px; border:1px solid #e2e8f0;">${d.dia}</td><td style="padding:4px 8px; border:1px solid #e2e8f0; text-align:right; font-weight:700;">${d.cantidad} (${d.porcentaje}%)</td></tr>`;
+            });
+
+            // Tabla especies
+            const tEsp = document.getElementById('printTablaEspecies');
+            const c = datosReporteActual.distribucionEspecies ? datosReporteActual.distribucionEspecies.caninos || 0 : 0;
+            const f = datosReporteActual.distribucionEspecies ? datosReporteActual.distribucionEspecies.felinos || 0 : 0;
+            const o = datosReporteActual.distribucionEspecies ? datosReporteActual.distribucionEspecies.otros || 0 : 0;
+            tEsp.innerHTML = `
+                <tr><td style="padding:4px 8px; border:1px solid #e2e8f0;">Caninos (Perros)</td><td style="padding:4px 8px; border:1px solid #e2e8f0; text-align:right; font-weight:700;">${c}</td></tr>
+                <tr><td style="padding:4px 8px; border:1px solid #e2e8f0;">Felinos (Gatos)</td><td style="padding:4px 8px; border:1px solid #e2e8f0; text-align:right; font-weight:700;">${f}</td></tr>
+                <tr><td style="padding:4px 8px; border:1px solid #e2e8f0;">Otras Especies</td><td style="padding:4px 8px; border:1px solid #e2e8f0; text-align:right; font-weight:700;">${o}</td></tr>
+            `;
+
+            // Tabla detalle A4
+            const tDet = document.getElementById('printTablaDetalle');
+            tDet.innerHTML = '';
+            const detalleArr = datosReporteActual.detalle || [];
+            if (detalleArr.length === 0) {
+                tDet.innerHTML = `<tr><td colspan="6" style="padding:12px; text-align:center; color:#94a3b8;">Sin registros en el período</td></tr>`;
+            } else {
+                detalleArr.forEach(item => {
+                    tDet.innerHTML += `
+                        <tr style="border-bottom:1px solid #e2e8f0;">
+                            <td style="padding:5px 6px;">${item.fecha} ${item.hora}</td>
+                            <td style="padding:5px 6px; font-weight:700;">${item.mascotaNombre} <span style="font-weight:normal; color:#64748b;">(${item.mascotaEspecie})</span></td>
+                            <td style="padding:5px 6px;">${item.clienteNombre}</td>
+                            <td style="padding:5px 6px;">${item.veterinarioNombre}</td>
+                            <td style="padding:5px 6px;">${item.motivo}</td>
+                            <td style="padding:5px 6px; text-align:right; font-weight:700;">${item.estado}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // Lanzar ventana de impresión nativa
+            mostrarToast("Generando reporte oficial A4...", "info");
+            setTimeout(() => {
+                window.print();
+            }, 300);
+        }
+    </script>
+</body>
+</html>

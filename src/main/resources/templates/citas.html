@@ -319,6 +319,42 @@
                         <input type="text" id="atenderAlergias" placeholder="Ej: Ninguna conocida">
                     </div>
                 </div>
+
+                <!-- RN-14: CITA DE SEGUIMIENTO / PRÓXIMA VISITA -->
+                <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:12px 14px; margin-top:8px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" id="checkAgendarControl" style="width:17px; height:17px; cursor:pointer;" onchange="toggleControlCita(this.checked)">
+                        <label for="checkAgendarControl" style="font-weight:700; color:#166534; cursor:pointer; margin:0; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
+                            <span>📅</span> Programar Cita de Control / Seguimiento Clínico (RN-14)
+                        </label>
+                    </div>
+                    <div id="seccionCamposControl" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #86efac;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:8px;">
+                            <div>
+                                <label style="font-size:11px; font-weight:700; color:#374151; display:block; margin-bottom:4px;">Fecha Próxima Visita:</label>
+                                <input type="date" id="controlFecha" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #cbd5e1; font-size:13px; background:white;">
+                            </div>
+                            <div>
+                                <label style="font-size:11px; font-weight:700; color:#374151; display:block; margin-bottom:4px;">Hora de Control:</label>
+                                <select id="controlHora" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #cbd5e1; font-size:13px; background:white;">
+                                    <option value="09:00">09:00 AM</option>
+                                    <option value="10:00" selected>10:00 AM</option>
+                                    <option value="11:00">11:00 AM</option>
+                                    <option value="12:00">12:00 PM</option>
+                                    <option value="14:00">02:00 PM</option>
+                                    <option value="15:00">03:00 PM</option>
+                                    <option value="16:00">04:00 PM</option>
+                                    <option value="17:00">05:00 PM</option>
+                                    <option value="18:00">06:00 PM</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size:11px; font-weight:700; color:#374151; display:block; margin-bottom:4px;">Motivo del Control:</label>
+                            <input type="text" id="controlMotivo" value="Control clínico y evaluación de tratamiento" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #cbd5e1; font-size:13px; background:white;">
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="modal-footer">
@@ -411,6 +447,9 @@
 
         <div class="modal-footer">
             <button type="button" class="btn-secondary" onclick="cerrarModalFichaAtencion()">Cerrar</button>
+            <button type="button" class="btn-primary" style="background:#0f766e; border-color:#0f766e;" onclick="agendarControlDesdeFicha()">
+                📅 Agendar Próximo Control
+            </button>
             <button type="button" class="btn-primary" onclick="imprimirFichaCita()">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="6 9 6 2 18 2 18 9"></polyline>
@@ -714,6 +753,13 @@
                     if (espLower.includes('perro') || espLower.includes('canino')) petIcon = '🐶';
                     else if (espLower.includes('gato') || espLower.includes('felino')) petIcon = '🐱';
 
+                    // RN-12: Alertas clínicas visibles en agenda
+                    const alertasHTML = (c.alertasClinicas && c.alertasClinicas.length > 0)
+                        ? `<div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">
+                             ${c.alertasClinicas.map(a => `<span class="badge-alerta-clinica" style="background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:4px;">⚠️ ${a}</span>`).join('')}
+                           </div>`
+                        : '';
+
                     const puedeAtender = estado !== 'ATENDIDA' && estado !== 'CANCELADA';
 
                     bodyHTML += `
@@ -732,6 +778,7 @@
                                     <div style="font-size:12px; color:#64748b; margin-top:2px;">
                                         👤 Propietario: <strong>${c.clienteNombre}</strong> | 🩺 ${c.veterinarioNombre} | ⏰ Hora: <strong>${c.horaFormateada || horaSlot}</strong>
                                     </div>
+                                    ${alertasHTML}
                                 </div>
                             </div>
 
@@ -940,6 +987,11 @@
                             ${c.clienteTelefono ? `<span class="meta-tag">📞 ${c.clienteTelefono}</span>` : ''}
                             <span class="meta-tag">🩺 ${c.veterinarioNombre}</span>
                         </div>
+                        ${(c.alertasClinicas && c.alertasClinicas.length > 0) ? `
+                            <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">
+                                ${c.alertasClinicas.map(a => `<span class="badge-alerta-clinica" style="background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:4px;">⚠️ ${a}</span>`).join('')}
+                            </div>
+                        ` : ''}
                     </div>
                 </div>
 
@@ -1114,6 +1166,11 @@
         }
     }
 
+    function toggleControlCita(activo) {
+        const sec = document.getElementById('seccionCamposControl');
+        if (sec) sec.style.display = activo ? 'block' : 'none';
+    }
+
     function abrirModalAtenderCita(id) {
         if (!esClinico) {
             mostrarToast("Acceso denegado: Solo el personal veterinario o administrador puede atender consultas.", "error");
@@ -1134,6 +1191,19 @@
         document.getElementById('atenderInfoVeterinario').textContent = c.veterinarioNombre;
 
         document.getElementById('atenderDiagnostico').value = `Motivo de consulta: ${c.motivo}. `;
+
+        // RN-14: Configurar defaults para cita de control (+7 días)
+        const checkCtrl = document.getElementById('checkAgendarControl');
+        if (checkCtrl) {
+            checkCtrl.checked = false;
+            document.getElementById('seccionCamposControl').style.display = 'none';
+            const d7 = new Date();
+            d7.setDate(d7.getDate() + 7);
+            const fechaSugerida = d7.toISOString().split('T')[0];
+            document.getElementById('controlFecha').value = fechaSugerida;
+            document.getElementById('controlFecha').min = new Date().toISOString().split('T')[0];
+            document.getElementById('controlMotivo').value = `Control y seguimiento de evolución (${c.mascotaNombre})`;
+        }
 
         document.getElementById('modalAtenderCita').classList.add('active');
     }
@@ -1171,12 +1241,56 @@
             }
 
             cerrarModalAtenderCita();
-            mostrarToast("¡Atención registrada e historial clínico actualizado!", "success");
-            cargarCitas();
-            cargarEstadisticas();
+
+            // RN-14: Si se marcó programar cita de seguimiento / control, agendarla automáticamente
+            const agendarControl = document.getElementById('checkAgendarControl') && document.getElementById('checkAgendarControl').checked;
+            if (agendarControl) {
+                const fechaCtrl = document.getElementById('controlFecha').value;
+                const horaCtrl = document.getElementById('controlHora').value;
+                const motivoCtrl = document.getElementById('controlMotivo').value.trim() || 'Control y seguimiento clínico';
+
+                try {
+                    const respCtrl = await fetch('/api/citas', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        body: JSON.stringify({
+                            fecha: fechaCtrl,
+                            hora: horaCtrl,
+                            mascotaId: payload.mascotaId,
+                            veterinarioId: payload.veterinarioId,
+                            motivo: motivoCtrl,
+                            estado: 'PROGRAMADA'
+                        })
+                    });
+
+                    if (respCtrl.ok) {
+                        mostrarToast(`¡Atención registrada y Cita de Control agendada para el ${fechaCtrl}!`, "success");
+                    } else {
+                        const errData = await respCtrl.json().catch(() => ({}));
+                        mostrarToast(`Atención registrada. Aviso de cita de control: ${errData.error || 'Horario no disponible'}`, "warning");
+                    }
+                } catch (eCtrl) {
+                    mostrarToast("Atención registrada. Hubo un error de conexión al agendar el control.", "warning");
+                }
+            } else {
+                mostrarToast("¡Atención registrada e historial clínico actualizado!", "success");
+            }
+
+            await cargarCitas();
+            await cargarEstadisticas();
         } catch (error) {
             mostrarToast("Error de conexión con el servidor", "error");
         }
+    }
+
+    function agendarControlDesdeFicha() {
+        cerrarModalFichaAtencion();
+        abrirModalCrear();
+        const d7 = new Date();
+        d7.setDate(d7.getDate() + 7);
+        document.getElementById('inputFecha').value = d7.toISOString().split('T')[0];
+        document.getElementById('inputHora').value = '10:00';
+        document.getElementById('inputMotivo').value = 'Control clínico y seguimiento post-consulta';
     }
 
     async function eliminarCita(id) {

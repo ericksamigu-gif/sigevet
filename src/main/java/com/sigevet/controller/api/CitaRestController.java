@@ -27,11 +27,13 @@ public class CitaRestController {
     private final CitaRepository citaRepository;
     private final MascotaRepository mascotaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final com.sigevet.repository.MascotaAlergiaRepository mascotaAlergiaRepository;
 
-    public CitaRestController(CitaRepository citaRepository, MascotaRepository mascotaRepository, UsuarioRepository usuarioRepository) {
+    public CitaRestController(CitaRepository citaRepository, MascotaRepository mascotaRepository, UsuarioRepository usuarioRepository, com.sigevet.repository.MascotaAlergiaRepository mascotaAlergiaRepository) {
         this.citaRepository = citaRepository;
         this.mascotaRepository = mascotaRepository;
         this.usuarioRepository = usuarioRepository;
+        this.mascotaAlergiaRepository = mascotaAlergiaRepository;
     }
 
     /**
@@ -358,7 +360,7 @@ public class CitaRestController {
                 : "No asignado";
         Integer vetId = c.getVeterinario() != null ? c.getVeterinario().getId() : null;
 
-        return new CitaDTO(
+        CitaDTO dto = new CitaDTO(
                 c.getId(),
                 c.getFecha(),
                 c.getHora(),
@@ -373,5 +375,26 @@ public class CitaRestController {
                 vetId,
                 vetNombre
         );
+
+        // Regla de Negocio (RN-12): Alertas clínicas visibles directamente en la agenda
+        List<String> alertas = new ArrayList<>();
+        if (c.getMascota() != null && c.getMascota().getId() != null) {
+            List<com.sigevet.entity.MascotaAlergia> alergias = mascotaAlergiaRepository.findByMascotaId(c.getMascota().getId());
+            for (com.sigevet.entity.MascotaAlergia ma : alergias) {
+                if (ma.getAlergia() != null && ma.getAlergia().getNombre() != null) {
+                    String sev = (ma.getSeveridad() != null && !ma.getSeveridad().isBlank()) ? " (" + ma.getSeveridad() + ")" : "";
+                    alertas.add("Alérgico a " + ma.getAlergia().getNombre() + sev);
+                }
+            }
+            if (c.getMascota().getFechaNacimiento() != null) {
+                int edad = java.time.Period.between(c.getMascota().getFechaNacimiento(), java.time.LocalDate.now()).getYears();
+                if (edad >= 9) {
+                    alertas.add("Paciente geriátrico (" + edad + " años)");
+                }
+            }
+        }
+        dto.setAlertasClinicas(alertas);
+
+        return dto;
     }
 }

@@ -312,6 +312,42 @@
                         <input type="text" id="inputAlergias" placeholder="Ej: Penicilinas, Ninguna">
                     </div>
                 </div>
+
+                <!-- RN-14: CITA DE SEGUIMIENTO / PRÓXIMA VISITA -->
+                <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:12px 14px; margin-top:8px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" id="checkAgendarControlHistorial" style="width:17px; height:17px; cursor:pointer;" onchange="toggleControlHistorial(this.checked)">
+                        <label for="checkAgendarControlHistorial" style="font-weight:700; color:#166534; cursor:pointer; margin:0; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
+                            <span>📅</span> Programar Cita de Control / Seguimiento Clínico (RN-14)
+                        </label>
+                    </div>
+                    <div id="seccionCamposControlHistorial" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #86efac;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:8px;">
+                            <div>
+                                <label style="font-size:11px; font-weight:700; color:#374151; display:block; margin-bottom:4px;">Fecha Próxima Visita:</label>
+                                <input type="date" id="controlFechaHistorial" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #cbd5e1; font-size:13px; background:white;">
+                            </div>
+                            <div>
+                                <label style="font-size:11px; font-weight:700; color:#374151; display:block; margin-bottom:4px;">Hora de Control:</label>
+                                <select id="controlHoraHistorial" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #cbd5e1; font-size:13px; background:white;">
+                                    <option value="09:00">09:00 AM</option>
+                                    <option value="10:00" selected>10:00 AM</option>
+                                    <option value="11:00">11:00 AM</option>
+                                    <option value="12:00">12:00 PM</option>
+                                    <option value="14:00">02:00 PM</option>
+                                    <option value="15:00">03:00 PM</option>
+                                    <option value="16:00">04:00 PM</option>
+                                    <option value="17:00">05:00 PM</option>
+                                    <option value="18:00">06:00 PM</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size:11px; font-weight:700; color:#374151; display:block; margin-bottom:4px;">Motivo del Control:</label>
+                            <input type="text" id="controlMotivoHistorial" value="Control clínico y evaluación de tratamiento" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #cbd5e1; font-size:13px; background:white;">
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="modal-footer">
@@ -1066,6 +1102,11 @@
      * MODAL NUEVA CONSULTA MÉDICA
      * =========================================================================
      */
+    function toggleControlHistorial(activo) {
+        const sec = document.getElementById('seccionCamposControlHistorial');
+        if (sec) sec.style.display = activo ? 'block' : 'none';
+    }
+
     function abrirModalCrear() {
         if (!esClinico) {
             mostrarToast("Acceso denegado: Se requiere rol VETERINARIO o ADMINISTRADOR para registrar consultas.", "error");
@@ -1076,6 +1117,18 @@
         document.getElementById('atencionId').value = '';
         const hoy = new Date().toISOString().split('T')[0];
         document.getElementById('inputFecha').value = hoy;
+
+        // Configuración de Cita de Control (RN-14)
+        const checkCtrl = document.getElementById('checkAgendarControlHistorial');
+        if (checkCtrl) {
+            checkCtrl.checked = false;
+            document.getElementById('seccionCamposControlHistorial').style.display = 'none';
+            const d7 = new Date();
+            d7.setDate(d7.getDate() + 7);
+            document.getElementById('controlFechaHistorial').value = d7.toISOString().split('T')[0];
+            document.getElementById('controlFechaHistorial').min = hoy;
+        }
+
         document.getElementById('modalTitulo').innerHTML = '<span>🩺</span> Registrar Nueva Consulta Médica';
         document.getElementById('btnGuardar').textContent = 'Guardar Consulta';
         document.getElementById('modalAtencion').classList.add('active');
@@ -1118,10 +1171,44 @@
             }
 
             cerrarModalAtencion();
-            mostrarToast(esEdicion ? "Consulta actualizada correctamente" : "Consulta médica registrada correctamente", "success");
-            cargarDatosIniciales();
-            cargarEstadisticas();
-            cargarComboCitas();
+
+            // RN-14: Programar cita de control / seguimiento si fue seleccionada
+            const agendarCtrl = document.getElementById('checkAgendarControlHistorial') && document.getElementById('checkAgendarControlHistorial').checked;
+            if (agendarCtrl) {
+                const fCtrl = document.getElementById('controlFechaHistorial').value;
+                const hCtrl = document.getElementById('controlHoraHistorial').value;
+                const mCtrl = document.getElementById('controlMotivoHistorial').value.trim() || 'Control clínico y seguimiento';
+
+                try {
+                    const respCtrl = await fetch('/api/citas', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        body: JSON.stringify({
+                            fecha: fCtrl,
+                            hora: hCtrl,
+                            mascotaId: payload.mascotaId,
+                            veterinarioId: payload.veterinarioId,
+                            motivo: mCtrl,
+                            estado: 'PROGRAMADA'
+                        })
+                    });
+
+                    if (respCtrl.ok) {
+                        mostrarToast(`¡Consulta guardada y Cita de Control agendada para el ${fCtrl}!`, "success");
+                    } else {
+                        const err = await respCtrl.json().catch(() => ({}));
+                        mostrarToast(`Consulta guardada. Aviso de control: ${err.error || 'Horario ocupado'}`, "warning");
+                    }
+                } catch (eCtrl) {
+                    mostrarToast("Consulta registrada. Error de red al programar la cita de control.", "warning");
+                }
+            } else {
+                mostrarToast(esEdicion ? "Consulta actualizada correctamente" : "Consulta médica registrada correctamente", "success");
+            }
+
+            await cargarDatosIniciales();
+            await cargarEstadisticas();
+            await cargarComboCitas();
         } catch (error) {
             mostrarToast("Error de conexión con el servidor", "error");
         }

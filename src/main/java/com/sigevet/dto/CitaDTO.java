@@ -2,6 +2,8 @@ package com.sigevet.dto;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class CitaDTO {
 
@@ -19,6 +21,7 @@ public class CitaDTO {
     private String clienteTelefono;
     private Integer veterinarioId;
     private String veterinarioNombre;
+    private List<String> alertasClinicas = new ArrayList<>();
 
     public CitaDTO() {
     }
@@ -151,5 +154,13 @@ public class CitaDTO {
 
     public void setVeterinarioNombre(String veterinarioNombre) {
         this.veterinarioNombre = veterinarioNombre;
+    }
+
+    public List<String> getAlertasClinicas() {
+        return alertasClinicas;
+    }
+
+    public void setAlertasClinicas(List<String> alertasClinicas) {
+        this.alertasClinicas = alertasClinicas;
     }
 }

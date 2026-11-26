@@ -159,4 +159,39 @@ class SigevetApplicationTests {
         assertTrue(esHorarioValidoParaAgendar.test(citaValidaFutura),
                 "El sistema debe permitir agendar citas en horarios actuales o posteriores");
     }
+
+    @Test
+    @DisplayName("CP-07: Validación de Auditoría (registro/modificación) y Eliminación Lógica (activo=false)")
+    void test7_ValidacionAuditoriaYEliminacionLogica() {
+        // 1. Creación de una entidad de prueba
+        Cliente cliente = new Cliente();
+        cliente.setNombre("Lucía");
+        cliente.setApellido("Vargas");
+        cliente.setDni("87654321");
+        cliente.setCorreo("lucia.vargas@gmail.com");
+
+        // Disparar ciclo de persistencia
+        cliente.prePersist();
+
+        assertTrue(cliente.getActivo(), "Toda nueva entidad debe crearse con estado activo = true");
+        assertNotNull(cliente.getFechaCreacion(), "La fecha y hora de creación debe registrarse automáticamente");
+        assertNotNull(cliente.getUsuarioCreacion(), "El usuario de creación debe quedar registrado en la auditoría");
+
+        // 2. Modificación de la entidad
+        cliente.setTelefono("987123456");
+        cliente.preUpdate();
+
+        assertNotNull(cliente.getFechaModificacion(), "La fecha y hora de modificación debe registrarse al actualizar");
+        assertNotNull(cliente.getUsuarioModificacion(), "El usuario modificador debe quedar registrado en la auditoría");
+
+        // 3. Eliminación Lógica
+        LocalDateTime momentoEliminacion = LocalDateTime.now();
+        cliente.setActivo(false);
+        cliente.setFechaEliminacion(momentoEliminacion);
+        cliente.setUsuarioEliminacion("admin");
+
+        assertFalse(cliente.getActivo(), "La eliminación lógica debe marcar activo = false sin destruir el registro físico");
+        assertNotNull(cliente.getFechaEliminacion(), "Debe conservarse la fecha y hora exacta de la baja lógica");
+        assertEquals("admin", cliente.getUsuarioEliminacion(), "Debe conservarse el usuario responsable de la baja lógica");
+    }
 }

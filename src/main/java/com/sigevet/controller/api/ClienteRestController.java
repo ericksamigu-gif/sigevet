@@ -5,6 +5,8 @@ import com.sigevet.entity.Cliente;
 import com.sigevet.entity.Mascota;
 import com.sigevet.repository.ClienteRepository;
 import com.sigevet.repository.MascotaRepository;
+import com.sigevet.util.AuditoriaUtil;
+import java.time.LocalDateTime;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -203,8 +205,11 @@ public class ClienteRestController {
                 ));
             }
 
-            clienteRepository.delete(cliente);
-            return ResponseEntity.ok(Map.of("mensaje", "Cliente eliminado con éxito", "id", id));
+            cliente.setActivo(false);
+            cliente.setFechaEliminacion(LocalDateTime.now());
+            cliente.setUsuarioEliminacion(AuditoriaUtil.getUsuarioActual());
+            clienteRepository.save(cliente);
+            return ResponseEntity.ok(Map.of("mensaje", "Cliente eliminado con éxito (eliminación lógica)", "id", id));
         }).orElse(ResponseEntity.notFound().build());
     }
 

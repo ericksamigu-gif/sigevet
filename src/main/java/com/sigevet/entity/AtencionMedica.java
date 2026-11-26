@@ -12,10 +12,12 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import java.time.LocalDate;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "atencion_medica")
-public class AtencionMedica {
+@SQLRestriction("activo = true")
+public class AtencionMedica extends BaseAuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

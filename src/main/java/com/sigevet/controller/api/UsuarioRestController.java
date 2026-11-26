@@ -3,7 +3,9 @@ package com.sigevet.controller.api;
 import com.sigevet.dto.UsuarioDTO;
 import com.sigevet.entity.Usuario;
 import com.sigevet.repository.UsuarioRepository;
+import com.sigevet.util.AuditoriaUtil;
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -162,6 +164,25 @@ public class UsuarioRestController {
         usuarioRepository.save(u);
 
         return ResponseEntity.ok(Map.of("id", u.getId(), "estado", u.getEstado()));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarUsuario(@PathVariable Integer id, HttpServletRequest request) {
+        if (!esAdministrador(request)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Acceso denegado."));
+        }
+
+        Optional<Usuario> opt = usuarioRepository.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Usuario no encontrado"));
+
+        Usuario u = opt.get();
+        u.setActivo(false);
+        u.setEstado("INACTIVO");
+        u.setFechaEliminacion(LocalDateTime.now());
+        u.setUsuarioEliminacion(AuditoriaUtil.getUsuarioActual());
+        usuarioRepository.save(u);
+
+        return ResponseEntity.ok(Map.of("mensaje", "Usuario eliminado lógicamente con éxito", "id", u.getId()));
     }
 
     private UsuarioDTO convertirADTO(Usuario u) {

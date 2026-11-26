@@ -9,10 +9,12 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Id;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "cliente")
-public class Cliente {
+@SQLRestriction("activo = true")
+public class Cliente extends BaseAuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import com.sigevet.util.AuditoriaUtil;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -471,8 +473,12 @@ public class MascotaRestController {
                     "error", "No se puede eliminar la mascota porque tiene historial médico (" + atencionesCount + " atenciones) o citas agendadas (" + citasCount + " citas)."));
         }
 
-        mascotaRepository.deleteById(id);
-        return ResponseEntity.ok(Map.of("mensaje", "Mascota eliminada correctamente"));
+        Mascota mascota = opt.get();
+        mascota.setActivo(false);
+        mascota.setFechaEliminacion(LocalDateTime.now());
+        mascota.setUsuarioEliminacion(AuditoriaUtil.getUsuarioActual());
+        mascotaRepository.save(mascota);
+        return ResponseEntity.ok(Map.of("mensaje", "Mascota eliminada correctamente (eliminación lógica)"));
     }
 
     /**

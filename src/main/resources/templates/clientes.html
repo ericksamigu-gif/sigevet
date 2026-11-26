@@ -169,7 +169,7 @@
             <div class="modal-body">
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="inputDni">DNI (8 dígitos numéricos) *</label>
+                        <label for="inputDni">DNI (8 dígitos numéricos) <span class="required" style="color:#ef4444; font-weight:800;">*</span></label>
                         <input type="text" id="inputDni" placeholder="Ej: 74859632" required maxlength="8" pattern="\d{8}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
                     </div>
 
@@ -181,12 +181,12 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="inputNombre">Nombres *</label>
+                        <label for="inputNombre">Nombres <span class="required" style="color:#ef4444; font-weight:800;">*</span></label>
                         <input type="text" id="inputNombre" placeholder="Ej: Carlos" required maxlength="100">
                     </div>
 
                     <div class="form-group">
-                        <label for="inputApellido">Apellidos *</label>
+                        <label for="inputApellido">Apellidos <span class="required" style="color:#ef4444; font-weight:800;">*</span></label>
                         <input type="text" id="inputApellido" placeholder="Ej: Ramírez" required maxlength="100">
                     </div>
                 </div>

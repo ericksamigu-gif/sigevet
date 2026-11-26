@@ -16,6 +16,33 @@
 
     <!-- Hoja de Estilos Centralizada de SIGEVET -->
     <link rel="stylesheet" th:href="@{/css/sigevet.css}">
+
+    <!-- Estilo global para campos obligatorios en rojo -->
+    <style>
+        label .required, label .text-danger, .required-asterisk, span.required {
+            color: #ef4444 !important;
+            font-weight: 800 !important;
+            font-size: 1.1em !important;
+            margin-left: 2px !important;
+        }
+    </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            function resaltarAsteriscos() {
+                document.querySelectorAll("label").forEach(function(lbl) {
+                    if (lbl.innerHTML.includes("*") && !lbl.querySelector(".required")) {
+                        lbl.innerHTML = lbl.innerHTML.replace(/\s*\*/g, ' <span class="required" style="color:#ef4444; font-weight:800;">*</span>');
+                    }
+                });
+            }
+            resaltarAsteriscos();
+            document.addEventListener("click", function(e) {
+                if (e.target.closest("button") || e.target.closest("a")) {
+                    setTimeout(resaltarAsteriscos, 150);
+                }
+            });
+        });
+    </script>
 </head>
 
 <body>

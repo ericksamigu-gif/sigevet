@@ -9,6 +9,8 @@ import com.sigevet.repository.AtencionMedicaRepository;
 import com.sigevet.repository.CitaRepository;
 import com.sigevet.repository.MascotaRepository;
 import com.sigevet.repository.UsuarioRepository;
+import com.sigevet.util.AuditoriaUtil;
+import java.time.LocalDateTime;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.HttpStatus;
@@ -347,8 +349,12 @@ public class AtencionMedicaRestController {
                     .body(Map.of("error", "La atención médica con ID " + id + " no existe."));
         }
 
-        atencionMedicaRepository.deleteById(id);
-        return ResponseEntity.ok(Map.of("mensaje", "Atención médica eliminada correctamente."));
+        AtencionMedica atencion = atencionOpt.get();
+        atencion.setActivo(false);
+        atencion.setFechaEliminacion(LocalDateTime.now());
+        atencion.setUsuarioEliminacion(AuditoriaUtil.getUsuarioActual());
+        atencionMedicaRepository.save(atencion);
+        return ResponseEntity.ok(Map.of("mensaje", "Atención médica eliminada correctamente (eliminación lógica)."));
     }
 
     private AtencionMedicaDTO convertirADTO(AtencionMedica a) {

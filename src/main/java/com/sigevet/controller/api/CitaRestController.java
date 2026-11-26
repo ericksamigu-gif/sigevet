@@ -7,6 +7,7 @@ import com.sigevet.entity.Usuario;
 import com.sigevet.repository.CitaRepository;
 import com.sigevet.repository.MascotaRepository;
 import com.sigevet.repository.UsuarioRepository;
+import com.sigevet.util.AuditoriaUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -199,8 +200,11 @@ public class CitaRestController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminarCita(@PathVariable Integer id) {
         return citaRepository.findById(id).map(cita -> {
-            citaRepository.delete(cita);
-            return ResponseEntity.ok(Map.of("mensaje", "Cita cancelada y eliminada con éxito", "id", id));
+            cita.setActivo(false);
+            cita.setFechaEliminacion(LocalDateTime.now());
+            cita.setUsuarioEliminacion(AuditoriaUtil.getUsuarioActual());
+            citaRepository.save(cita);
+            return ResponseEntity.ok(Map.of("mensaje", "Cita cancelada y eliminada lógicamente con éxito", "id", id));
         }).orElse(ResponseEntity.notFound().build());
     }
 

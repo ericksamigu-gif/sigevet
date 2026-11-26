@@ -233,7 +233,7 @@
 
     <!-- ================= CONTENEDOR OCULTO PARA IMPRESIÓN OFICIAL A4 ================= -->
     <div id="seccionImpresionA4" style="display:none;">
-        <div style="padding:30px; font-family:'Plus Jakarta Sans', sans-serif; color:#0f172a; max-width:800px; margin:0 auto;">
+        <div style="padding:10px 15px; font-family:'Plus Jakarta Sans', sans-serif; color:#0f172a; width:100%; margin:0 auto; box-sizing:border-box;">
             <!-- Membrete Oficial -->
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #0f766e; padding-bottom:16px; margin-bottom:20px;">
                 <div style="display:flex; align-items:center; gap:12px;">
@@ -349,21 +349,32 @@
         }
 
         @media print {
-            body * {
-                visibility: hidden;
+            @page {
+                size: A4 portrait;
+                margin: 8mm 10mm;
             }
-            #seccionImpresionA4, #seccionImpresionA4 * {
-                visibility: visible;
+            html, body {
+                height: auto !important;
+                min-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                overflow: visible !important;
+            }
+            aside, header, .main-wrapper, .sidebar, .top-navbar, .toast-container {
+                display: none !important;
             }
             #seccionImpresionA4 {
                 display: block !important;
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
+                position: static !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
             }
-            .sidebar, .top-navbar, .page-header-row, .table-search-bar, .toast-container {
-                display: none !important;
+            #seccionImpresionA4 * {
+                visibility: visible !important;
             }
         }
     </style>

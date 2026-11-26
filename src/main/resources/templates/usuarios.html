@@ -158,14 +158,14 @@
                 <div class="modal-body">
                     <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
                         <div class="form-group">
-                            <label for="inputUsername">Username (Acceso) *</label>
+                            <label for="inputUsername">Username (Acceso) <span class="required" style="color:#ef4444; font-weight:800;">*</span></label>
                             <input type="text" id="inputUsername" placeholder="Ej: aperez" required 
                                    style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; outline:none;">
                             <small id="usernameHelp" style="display:block; color:#64748b; font-size:11px; margin-top:3px;">Solo letras minúsculas y números.</small>
                         </div>
 
                         <div class="form-group">
-                            <label for="inputPassword" id="lblPassword">Contraseña *</label>
+                            <label for="inputPassword" id="lblPassword">Contraseña <span class="required" style="color:#ef4444; font-weight:800;">*</span></label>
                             <input type="password" id="inputPassword" placeholder="Contraseña de acceso" required
                                    style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; outline:none;">
                             <small id="passwordHelp" style="display:block; color:#64748b; font-size:11px; margin-top:3px;">Mínimo 6 caracteres.</small>
@@ -174,13 +174,13 @@
 
                     <div class="form-grid" style="grid-template-columns: 1fr 1fr; margin-top:12px;">
                         <div class="form-group">
-                            <label for="inputNombre">Nombres *</label>
+                            <label for="inputNombre">Nombres <span class="required" style="color:#ef4444; font-weight:800;">*</span></label>
                             <input type="text" id="inputNombre" placeholder="Ej: Carlos" required
                                    style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; outline:none;">
                         </div>
 
                         <div class="form-group">
-                            <label for="inputApellido">Apellidos *</label>
+                            <label for="inputApellido">Apellidos <span class="required" style="color:#ef4444; font-weight:800;">*</span></label>
                             <input type="text" id="inputApellido" placeholder="Ej: Mendoza" required
                                    style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; outline:none;">
                         </div>
@@ -188,7 +188,7 @@
 
                     <div class="form-grid" style="grid-template-columns: 1fr 1fr; margin-top:12px;">
                         <div class="form-group">
-                            <label for="inputRol">Rol de Permisos (RBAC) *</label>
+                            <label for="inputRol">Rol de Permisos (RBAC) <span class="required" style="color:#ef4444; font-weight:800;">*</span></label>
                             <select id="inputRol" required style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; outline:none; background:#fff;">
                                 <option value="RECEPCIONISTA">Recepcionista (Admisión y Citas)</option>
                                 <option value="VETERINARIO">Veterinario (Atención y Recetas)</option>
@@ -197,7 +197,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="inputEstado">Estado *</label>
+                            <label for="inputEstado">Estado <span class="required" style="color:#ef4444; font-weight:800;">*</span></label>
                             <select id="inputEstado" required style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; outline:none; background:#fff;">
                                 <option value="ACTIVO">ACTIVO (Permite acceso)</option>
                                 <option value="INACTIVO">INACTIVO (Bloqueado)</option>

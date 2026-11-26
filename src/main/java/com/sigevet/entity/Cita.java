@@ -13,10 +13,12 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "cita")
-public class Cita {
+@SQLRestriction("activo = true")
+public class Cita extends BaseAuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

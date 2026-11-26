@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -378,21 +379,25 @@ public class CitaRestController {
 
         // Regla de Negocio (RN-12): Alertas clínicas visibles directamente en la agenda
         List<String> alertas = new ArrayList<>();
-        if (c.getMascota() != null && c.getMascota().getId() != null) {
-            List<com.sigevet.entity.MascotaAlergia> alergias = mascotaAlergiaRepository.findByMascotaId(c.getMascota().getId());
-            for (com.sigevet.entity.MascotaAlergia ma : alergias) {
-                if (ma.getAlergia() != null && ma.getAlergia().getNombre() != null) {
-                    String sev = (ma.getSeveridad() != null && !ma.getSeveridad().isBlank()) ? " (" + ma.getSeveridad() + ")" : "";
-                    alertas.add("Alérgico a " + ma.getAlergia().getNombre() + sev);
+        try {
+            if (c.getMascota() != null && c.getMascota().getId() != null) {
+                List<com.sigevet.entity.MascotaAlergia> alergias = mascotaAlergiaRepository.findByMascotaId(c.getMascota().getId());
+                if (alergias != null) {
+                    for (com.sigevet.entity.MascotaAlergia ma : alergias) {
+                        if (ma.getAlergia() != null && ma.getAlergia().getNombre() != null) {
+                            String sev = (ma.getSeveridad() != null && !ma.getSeveridad().isBlank()) ? " (" + ma.getSeveridad() + ")" : "";
+                            alertas.add("Alérgico a " + ma.getAlergia().getNombre() + sev);
+                        }
+                    }
+                }
+                if (c.getMascota().getFechaNacimiento() != null && !c.getMascota().getFechaNacimiento().isAfter(java.time.LocalDate.now())) {
+                    int edad = java.time.Period.between(c.getMascota().getFechaNacimiento(), java.time.LocalDate.now()).getYears();
+                    if (edad >= 9) {
+                        alertas.add("Paciente geriátrico (" + edad + " años)");
+                    }
                 }
             }
-            if (c.getMascota().getFechaNacimiento() != null) {
-                int edad = java.time.Period.between(c.getMascota().getFechaNacimiento(), java.time.LocalDate.now()).getYears();
-                if (edad >= 9) {
-                    alertas.add("Paciente geriátrico (" + edad + " años)");
-                }
-            }
-        }
+        } catch (Exception ignored) {}
         dto.setAlertasClinicas(alertas);
 
         return dto;

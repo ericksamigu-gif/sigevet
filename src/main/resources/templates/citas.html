@@ -516,7 +516,11 @@
                 window.location.href = '/login?auth=required';
                 return;
             }
-            citasGlobal = await resp.json();
+            if (!resp.ok) {
+                throw new Error("El servidor retornó estado HTTP " + resp.status);
+            }
+            const data = await resp.json();
+            citasGlobal = Array.isArray(data) ? data : [];
 
             // Renderizar según la vista activa
             if (modoVistaActual === 'agenda') {
@@ -526,7 +530,8 @@
             }
         } catch (error) {
             console.error("Error al cargar citas:", error);
-            mostrarToast("Error al cargar las citas", "error");
+            citasGlobal = [];
+            mostrarToast("Error al cargar las citas del servidor", "error");
         }
     }
 
@@ -690,8 +695,9 @@
         titulo.textContent = formatearTituloFecha(fechaAgendaSeleccionada);
 
         // Filtrar citas correspondientes al día seleccionado y al veterinario (si aplica)
+        const citasArray = Array.isArray(citasGlobal) ? citasGlobal : [];
         const filtroVet = document.getElementById('filtroVeterinarioAgenda') ? document.getElementById('filtroVeterinarioAgenda').value : (esVeterinario && usuarioActualId ? String(usuarioActualId) : 'TODOS');
-        const citasDelDia = citasGlobal.filter(c => {
+        const citasDelDia = citasArray.filter(c => {
             if (c.fecha !== fechaAgendaSeleccionada) return false;
             if (filtroVet && filtroVet !== 'TODOS') {
                 return String(c.veterinarioId) === String(filtroVet);
@@ -872,7 +878,8 @@
         const estado = document.getElementById('filtroEstadoLista').value;
         const filtroVet = document.getElementById('filtroVeterinarioLista') ? document.getElementById('filtroVeterinarioLista').value : (esVeterinario && usuarioActualId ? String(usuarioActualId) : 'TODOS');
 
-        citasFiltradasLista = citasGlobal.filter(c => {
+        const citasArray = Array.isArray(citasGlobal) ? citasGlobal : [];
+        citasFiltradasLista = citasArray.filter(c => {
             const cumpleTexto = !q ||
                 (c.mascotaNombre && c.mascotaNombre.toLowerCase().includes(q)) ||
                 (c.motivo && c.motivo.toLowerCase().includes(q)) ||

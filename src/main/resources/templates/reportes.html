@@ -24,14 +24,23 @@
                     <p>Métricas gerenciales de citas atendidas, tasa de efectividad y análisis de afluencia semanal de pacientes (RF-06).</p>
                 </div>
 
-                <div class="header-actions">
-                    <button class="btn-primary" onclick="imprimirReporte()" style="display:inline-flex; align-items:center; gap:8px;">
+                <div class="header-actions" style="display:flex; align-items:center; gap:10px;">
+                    <button class="btn-primary" onclick="exportarExcel()" style="display:inline-flex; align-items:center; gap:8px; background:#15803d; border-color:#15803d;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="8" y1="13" x2="16" y2="13"></line>
+                            <line x1="8" y1="17" x2="16" y2="17"></line>
+                        </svg>
+                        Exportar a Excel (.xls)
+                    </button>
+                    <button class="btn-secondary" onclick="imprimirReporte()" style="display:inline-flex; align-items:center; gap:8px; background:white; color:#0f766e; border:1px solid #0f766e;">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="6 9 6 2 18 2 18 9"></polyline>
                             <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
                             <rect x="6" y="14" width="12" height="8"></rect>
                         </svg>
-                        Imprimir / Exportar Reporte A4
+                        Imprimir Reporte (A4)
                     </button>
                 </div>
             </div>
@@ -182,13 +191,18 @@
 
             <!-- TABLA DETALLADA DE CITAS Y ATENCIONES DEL PERÍODO -->
             <div style="background:white; border-radius:12px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-                <div style="padding:16px 20px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
+                <div style="padding:16px 20px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                     <div>
                         <h3 style="font-size:16px; font-weight:800; color:#0f172a; margin:0;">📋 Detalle de Citas y Atenciones en el Período</h3>
                         <span style="font-size:12px; color:#64748b;">Desglose cronológico de atenciones, pacientes y doctores asignados</span>
                     </div>
-                    <div style="font-size:13px; font-weight:700; color:#64748b;">
-                        Total: <span id="contadorDetalle" style="color:#0f766e; font-weight:800;">0</span> registros
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <button type="button" onclick="exportarExcel()" style="padding:6px 14px; font-size:12px; font-weight:700; color:#15803d; border:1px solid #bbf7d0; background:#f0fdf4; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                            📊 Exportar Esta Tabla a Excel
+                        </button>
+                        <div style="font-size:13px; font-weight:700; color:#64748b;">
+                            Total: <span id="contadorDetalle" style="color:#0f766e; font-weight:800;">0</span> registros
+                        </div>
                     </div>
                 </div>
 
@@ -553,6 +567,25 @@
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        function exportarExcel() {
+            if (!datosReporteActual || !datosReporteActual.detalle || datosReporteActual.detalle.length === 0) {
+                mostrarToast("No hay registros en el período seleccionado para exportar", "error");
+                return;
+            }
+
+            const fInicio = document.getElementById('fechaInicio').value || datosReporteActual.fechaInicio;
+            const fFin = document.getElementById('fechaFin').value || datosReporteActual.fechaFin;
+            const vetId = document.getElementById('filtroVeterinario').value;
+
+            mostrarToast("Descargando Detalle de Citas y Atenciones en Excel...", "info");
+
+            let url = `/api/reportes/exportar-excel?fechaInicio=${encodeURIComponent(fInicio)}&fechaFin=${encodeURIComponent(fFin)}`;
+            if (vetId) url += `&veterinarioId=${encodeURIComponent(vetId)}`;
+
+            // Disparar descarga directa del archivo generado por el servidor
+            window.location.href = url;
         }
 
         async function imprimirReporte() {

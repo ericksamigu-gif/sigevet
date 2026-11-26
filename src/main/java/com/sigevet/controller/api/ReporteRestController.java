@@ -259,4 +259,104 @@ public class ReporteRestController {
 
         return ResponseEntity.ok(result);
     }
+
+    /**
+     * Exportar el detalle de citas y atenciones en formato Excel (.xls / SpreadsheetML)
+     */
+    @GetMapping("/exportar-excel")
+    public ResponseEntity<byte[]> exportarExcel(
+            @RequestParam(required = false) String fechaInicio,
+            @RequestParam(required = false) String fechaFin,
+            @RequestParam(required = false) Integer veterinarioId,
+            HttpServletRequest request) {
+
+        LocalDate hoy = LocalDate.now();
+        LocalDate fInicio = (fechaInicio != null && !fechaInicio.isBlank())
+                ? LocalDate.parse(fechaInicio.trim())
+                : hoy.minusDays(6);
+        LocalDate fFin = (fechaFin != null && !fechaFin.isBlank())
+                ? LocalDate.parse(fechaFin.trim())
+                : hoy;
+
+        List<Cita> todasCitas = citaRepository.findAll();
+        List<Cita> citasFiltradas = todasCitas.stream()
+                .filter(c -> c.getFecha() != null)
+                .filter(c -> !c.getFecha().isBefore(fInicio) && !c.getFecha().isAfter(fFin))
+                .filter(c -> veterinarioId == null || (c.getVeterinario() != null && c.getVeterinario().getId().equals(veterinarioId)))
+                .sorted(Comparator.comparing(Cita::getFecha).thenComparing(c -> c.getHora() != null ? c.getHora() : java.time.LocalTime.MIN))
+                .collect(Collectors.toList());
+
+        // Registrar auditoría
+        try {
+            Usuario u = obtenerUsuarioActual(request);
+            Reporte r = new Reporte();
+            r.setTitulo("Exportación Excel Citas y Atenciones (" + fInicio + " al " + fFin + ")");
+            r.setTipoReporte("EXCEL_CITAS");
+            r.setFechaGeneracion(LocalDateTime.now());
+            r.setUsuario(u);
+            reporteRepository.save(r);
+        } catch (Exception ignored) {}
+
+        StringBuilder html = new StringBuilder();
+        html.append("<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\" xmlns=\"http://www.w3.org/TR/REC-html40\">");
+        html.append("<head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">");
+        html.append("<style>");
+        html.append("table { border-collapse: collapse; width: 100%; font-family: Calibri, Arial, sans-serif; font-size: 11pt; }");
+        html.append("th { background-color: #0f766e; color: #ffffff; font-weight: bold; border: 1px solid #cbd5e1; padding: 8px; text-align: left; }");
+        html.append("td { border: 1px solid #e2e8f0; padding: 6px; }");
+        html.append(".title { font-size: 16pt; font-weight: bold; color: #0f766e; }");
+        html.append(".subtitle { font-size: 11pt; color: #475569; }");
+        html.append("</style></head><body>");
+
+        html.append("<table>");
+        html.append("<tr><td colspan=\"9\" class=\"title\">CLÍNICA VETERINARIA SIGEVET</td></tr>");
+        html.append("<tr><td colspan=\"9\" class=\"subtitle\">REPORTE DETALLADO DE CITAS Y ATENCIONES CLÍNICAS</td></tr>");
+        html.append("<tr><td colspan=\"9\" class=\"subtitle\">Período auditado: Del ").append(fInicio).append(" al ").append(fFin).append(" | Generado: ").append(LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))).append("</td></tr>");
+        html.append("<tr><td colspan=\"9\"></td></tr>");
+
+        // Encabezados de tabla
+        html.append("<tr>");
+        html.append("<th>ID</th>");
+        html.append("<th>Fecha</th>");
+        html.append("<th>Hora</th>");
+        html.append("<th>Paciente (Mascota)</th>");
+        html.append("<th>Especie</th>");
+        html.append("<th>Propietario</th>");
+        html.append("<th>Médico Veterinario</th>");
+        html.append("<th>Motivo / Diagnóstico</th>");
+        html.append("<th>Estado</th>");
+        html.append("</tr>");
+
+        for (Cita c : citasFiltradas) {
+            String mascotaNom = c.getMascota() != null ? c.getMascota().getNombre() : "N/D";
+            String mascotaEsp = c.getMascota() != null ? c.getMascota().getEspecie() : "N/D";
+            String clienteNom = (c.getMascota() != null && c.getMascota().getCliente() != null)
+                    ? c.getMascota().getCliente().getNombre() + " " + c.getMascota().getCliente().getApellido()
+                    : "N/D";
+            String vetNom = c.getVeterinario() != null
+                    ? "Dr. " + c.getVeterinario().getNombre() + " " + c.getVeterinario().getApellido()
+                    : "No asignado";
+
+            html.append("<tr>");
+            html.append("<td>#").append(c.getId()).append("</td>");
+            html.append("<td>").append(c.getFecha() != null ? c.getFecha().toString() : "").append("</td>");
+            html.append("<td>").append(c.getHora() != null ? c.getHora().toString() : "--:--").append("</td>");
+            html.append("<td><b>").append(mascotaNom).append("</b></td>");
+            html.append("<td>").append(mascotaEsp).append("</td>");
+            html.append("<td>").append(clienteNom).append("</td>");
+            html.append("<td>").append(vetNom).append("</td>");
+            html.append("<td>").append(c.getMotivo() != null ? c.getMotivo() : "").append("</td>");
+            html.append("<td><b>").append(c.getEstado() != null ? c.getEstado() : "").append("</b></td>");
+            html.append("</tr>");
+        }
+
+        html.append("</table></body></html>");
+
+        byte[] bytes = html.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, "application/vnd.ms-excel; charset=UTF-8")
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"Reporte_Citas_SIGEVET_" + fInicio + "_al_" + fFin + ".xls\"")
+                .body(bytes);
+    }
 }

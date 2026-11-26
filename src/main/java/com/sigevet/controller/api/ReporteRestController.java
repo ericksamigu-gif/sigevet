@@ -261,7 +261,7 @@ public class ReporteRestController {
     }
 
     /**
-     * Exportar el detalle de citas y atenciones en formato Excel (.xls / SpreadsheetML)
+     * Exportar el detalle de citas y atenciones en formato nativo Excel (.xlsx / OpenXML)
      */
     @GetMapping("/exportar-excel")
     public ResponseEntity<byte[]> exportarExcel(
@@ -297,66 +297,121 @@ public class ReporteRestController {
             reporteRepository.save(r);
         } catch (Exception ignored) {}
 
-        StringBuilder html = new StringBuilder();
-        html.append("<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\" xmlns=\"http://www.w3.org/TR/REC-html40\">");
-        html.append("<head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">");
-        html.append("<style>");
-        html.append("table { border-collapse: collapse; width: 100%; font-family: Calibri, Arial, sans-serif; font-size: 11pt; }");
-        html.append("th { background-color: #0f766e; color: #ffffff; font-weight: bold; border: 1px solid #cbd5e1; padding: 8px; text-align: left; }");
-        html.append("td { border: 1px solid #e2e8f0; padding: 6px; }");
-        html.append(".title { font-size: 16pt; font-weight: bold; color: #0f766e; }");
-        html.append(".subtitle { font-size: 11pt; color: #475569; }");
-        html.append("</style></head><body>");
+        try (org.apache.poi.xssf.usermodel.XSSFWorkbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
+             java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
 
-        html.append("<table>");
-        html.append("<tr><td colspan=\"9\" class=\"title\">CLÍNICA VETERINARIA SIGEVET</td></tr>");
-        html.append("<tr><td colspan=\"9\" class=\"subtitle\">REPORTE DETALLADO DE CITAS Y ATENCIONES CLÍNICAS</td></tr>");
-        html.append("<tr><td colspan=\"9\" class=\"subtitle\">Período auditado: Del ").append(fInicio).append(" al ").append(fFin).append(" | Generado: ").append(LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))).append("</td></tr>");
-        html.append("<tr><td colspan=\"9\"></td></tr>");
+            org.apache.poi.ss.usermodel.Sheet sheet = workbook.createSheet("Citas y Atenciones");
 
-        // Encabezados de tabla
-        html.append("<tr>");
-        html.append("<th>ID</th>");
-        html.append("<th>Fecha</th>");
-        html.append("<th>Hora</th>");
-        html.append("<th>Paciente (Mascota)</th>");
-        html.append("<th>Especie</th>");
-        html.append("<th>Propietario</th>");
-        html.append("<th>Médico Veterinario</th>");
-        html.append("<th>Motivo / Diagnóstico</th>");
-        html.append("<th>Estado</th>");
-        html.append("</tr>");
+            // Estilos
+            org.apache.poi.ss.usermodel.CellStyle titleStyle = workbook.createCellStyle();
+            org.apache.poi.ss.usermodel.Font titleFont = workbook.createFont();
+            titleFont.setBold(true);
+            titleFont.setFontHeightInPoints((short) 14);
+            titleFont.setColor(org.apache.poi.ss.usermodel.IndexedColors.TEAL.getIndex());
+            titleStyle.setFont(titleFont);
 
-        for (Cita c : citasFiltradas) {
-            String mascotaNom = c.getMascota() != null ? c.getMascota().getNombre() : "N/D";
-            String mascotaEsp = c.getMascota() != null ? c.getMascota().getEspecie() : "N/D";
-            String clienteNom = (c.getMascota() != null && c.getMascota().getCliente() != null)
-                    ? c.getMascota().getCliente().getNombre() + " " + c.getMascota().getCliente().getApellido()
-                    : "N/D";
-            String vetNom = c.getVeterinario() != null
-                    ? "Dr. " + c.getVeterinario().getNombre() + " " + c.getVeterinario().getApellido()
-                    : "No asignado";
+            org.apache.poi.ss.usermodel.CellStyle subTitleStyle = workbook.createCellStyle();
+            org.apache.poi.ss.usermodel.Font subTitleFont = workbook.createFont();
+            subTitleFont.setFontHeightInPoints((short) 10);
+            subTitleFont.setColor(org.apache.poi.ss.usermodel.IndexedColors.GREY_50_PERCENT.getIndex());
+            subTitleStyle.setFont(subTitleFont);
 
-            html.append("<tr>");
-            html.append("<td>#").append(c.getId()).append("</td>");
-            html.append("<td>").append(c.getFecha() != null ? c.getFecha().toString() : "").append("</td>");
-            html.append("<td>").append(c.getHora() != null ? c.getHora().toString() : "--:--").append("</td>");
-            html.append("<td><b>").append(mascotaNom).append("</b></td>");
-            html.append("<td>").append(mascotaEsp).append("</td>");
-            html.append("<td>").append(clienteNom).append("</td>");
-            html.append("<td>").append(vetNom).append("</td>");
-            html.append("<td>").append(c.getMotivo() != null ? c.getMotivo() : "").append("</td>");
-            html.append("<td><b>").append(c.getEstado() != null ? c.getEstado() : "").append("</b></td>");
-            html.append("</tr>");
+            org.apache.poi.ss.usermodel.CellStyle headerStyle = workbook.createCellStyle();
+            org.apache.poi.ss.usermodel.Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerFont.setColor(org.apache.poi.ss.usermodel.IndexedColors.WHITE.getIndex());
+            headerStyle.setFont(headerFont);
+            headerStyle.setFillForegroundColor(org.apache.poi.ss.usermodel.IndexedColors.TEAL.getIndex());
+            headerStyle.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setBorderTop(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            headerStyle.setBorderBottom(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            headerStyle.setBorderLeft(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            headerStyle.setBorderRight(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+
+            org.apache.poi.ss.usermodel.CellStyle dataStyle = workbook.createCellStyle();
+            dataStyle.setBorderTop(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            dataStyle.setBorderBottom(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            dataStyle.setBorderLeft(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            dataStyle.setBorderRight(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+            dataStyle.setBottomBorderColor(org.apache.poi.ss.usermodel.IndexedColors.GREY_25_PERCENT.getIndex());
+            dataStyle.setTopBorderColor(org.apache.poi.ss.usermodel.IndexedColors.GREY_25_PERCENT.getIndex());
+            dataStyle.setLeftBorderColor(org.apache.poi.ss.usermodel.IndexedColors.GREY_25_PERCENT.getIndex());
+            dataStyle.setRightBorderColor(org.apache.poi.ss.usermodel.IndexedColors.GREY_25_PERCENT.getIndex());
+
+            // Título
+            org.apache.poi.ss.usermodel.Row row0 = sheet.createRow(0);
+            org.apache.poi.ss.usermodel.Cell cell0 = row0.createCell(0);
+            cell0.setCellValue("CLÍNICA VETERINARIA SIGEVET");
+            cell0.setCellStyle(titleStyle);
+
+            org.apache.poi.ss.usermodel.Row row1 = sheet.createRow(1);
+            org.apache.poi.ss.usermodel.Cell cell1 = row1.createCell(0);
+            cell1.setCellValue("REPORTE DETALLADO DE CITAS Y ATENCIONES CLÍNICAS");
+            cell1.setCellStyle(subTitleStyle);
+
+            org.apache.poi.ss.usermodel.Row row2 = sheet.createRow(2);
+            org.apache.poi.ss.usermodel.Cell cell2 = row2.createCell(0);
+            cell2.setCellValue("Período auditado: Del " + fInicio + " al " + fFin + " | Generado: " +
+                    LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+            cell2.setCellStyle(subTitleStyle);
+
+            // Encabezados
+            String[] headers = {"ID", "Fecha", "Hora", "Paciente (Mascota)", "Especie", "Propietario", "Médico Veterinario", "Motivo / Diagnóstico", "Estado"};
+            org.apache.poi.ss.usermodel.Row headerRow = sheet.createRow(4);
+            for (int i = 0; i < headers.length; i++) {
+                org.apache.poi.ss.usermodel.Cell c = headerRow.createCell(i);
+                c.setCellValue(headers[i]);
+                c.setCellStyle(headerStyle);
+            }
+
+            int rowIdx = 5;
+            for (Cita c : citasFiltradas) {
+                org.apache.poi.ss.usermodel.Row row = sheet.createRow(rowIdx++);
+                String mascotaNom = c.getMascota() != null ? c.getMascota().getNombre() : "N/D";
+                String mascotaEsp = c.getMascota() != null ? c.getMascota().getEspecie() : "N/D";
+                String clienteNom = (c.getMascota() != null && c.getMascota().getCliente() != null)
+                        ? c.getMascota().getCliente().getNombre() + " " + c.getMascota().getCliente().getApellido()
+                        : "N/D";
+                String vetNom = c.getVeterinario() != null
+                        ? "Dr. " + c.getVeterinario().getNombre() + " " + c.getVeterinario().getApellido()
+                        : "No asignado";
+
+                String[] values = {
+                        "#" + c.getId(),
+                        c.getFecha() != null ? c.getFecha().toString() : "",
+                        c.getHora() != null ? c.getHora().toString() : "--:--",
+                        mascotaNom,
+                        mascotaEsp,
+                        clienteNom,
+                        vetNom,
+                        c.getMotivo() != null ? c.getMotivo() : "",
+                        c.getEstado() != null ? c.getEstado() : ""
+                };
+
+                for (int i = 0; i < values.length; i++) {
+                    org.apache.poi.ss.usermodel.Cell cell = row.createCell(i);
+                    cell.setCellValue(values[i]);
+                    cell.setCellStyle(dataStyle);
+                }
+            }
+
+            // Ajustar ancho de columnas
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+                int currentWidth = sheet.getColumnWidth(i);
+                sheet.setColumnWidth(i, Math.max(currentWidth + 1024, 3200));
+            }
+
+            workbook.write(out);
+            byte[] bytes = out.toByteArray();
+
+            return ResponseEntity.ok()
+                    .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                    .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"Reporte_Citas_SIGEVET_" + fInicio + "_al_" + fFin + ".xlsx\"")
+                    .body(bytes);
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
-
-        html.append("</table></body></html>");
-
-        byte[] bytes = html.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
-
-        return ResponseEntity.ok()
-                .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, "application/vnd.ms-excel; charset=UTF-8")
-                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"Reporte_Citas_SIGEVET_" + fInicio + "_al_" + fFin + ".xls\"")
-                .body(bytes);
     }
 }

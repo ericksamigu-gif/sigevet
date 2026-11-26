@@ -710,7 +710,8 @@
                 // Si alguna cita fue cancelada o si aún hay doctores disponibles, permitir agendar en este slot
                 const hayCancelada = citasEnSlot.some(c => (c.estado || '').toUpperCase() === 'CANCELADA');
                 const activasEnSlot = citasEnSlot.filter(c => (c.estado || '').toUpperCase() !== 'CANCELADA');
-                if (hayCancelada || activasEnSlot.length < (listaVeterinarios.length || 1)) {
+                const totalDocs = (veterinariosLista && veterinariosLista.length) ? veterinariosLista.length : 1;
+                if (hayCancelada || activasEnSlot.length < totalDocs) {
                     bodyHTML += `
                         <div style="margin-top:6px;">
                             <button class="btn-slot-available" style="padding:6px 12px; font-size:12px;" onclick="abrirModalCrearConHorario('${fechaAgendaSeleccionada}', '${horaSlot}')">

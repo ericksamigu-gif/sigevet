@@ -103,8 +103,8 @@ public class UsuarioRestController {
             return ResponseEntity.badRequest().body(Map.of("error", "El nombre de usuario y contraseña son obligatorios."));
         }
 
-        if (usuarioRepository.findByUsername(username.trim()) != null) {
-            return ResponseEntity.badRequest().body(Map.of("error", "El nombre de usuario ya está registrado en el sistema."));
+        if (usuarioRepository.findByUsernameAnyStatus(username.trim()) != null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "El nombre de usuario '@" + username.trim() + "' ya existe en el sistema. Por favor elija otro nombre de usuario."));
         }
 
         Usuario nuevo = new Usuario();

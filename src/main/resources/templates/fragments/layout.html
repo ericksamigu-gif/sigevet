@@ -236,7 +236,29 @@
 <!-- ==========================================================================
      FRAGMENT: TOAST CONTAINER
      ========================================================================== -->
-<div class="toast-container" id="toastContainer" th:fragment="toastContainer"></div>
+<div class="toast-container" id="toastContainer" th:fragment="toastContainer">
+    <script th:inline="javascript">
+        if (typeof window.mostrarToast !== 'function') {
+            window.mostrarToast = function(mensaje, tipo = "info") {
+                const container = document.getElementById('toastContainer');
+                if (!container) return;
+                const toast = document.createElement('div');
+                toast.className = `toast-notif toast-${tipo}`;
+                let icono = 'ℹ️';
+                if (tipo === 'success') icono = '✅';
+                if (tipo === 'error') icono = '⚠️';
+                toast.innerHTML = `<span style="font-size:16px;">${icono}</span> <span>${mensaje}</span>`;
+                container.appendChild(toast);
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(10px)';
+                    toast.style.transition = 'all 0.3s ease';
+                    setTimeout(() => toast.remove(), 300);
+                }, 4000);
+            };
+        }
+    </script>
+</div>
 
 </body>
 </html>

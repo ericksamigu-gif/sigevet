@@ -375,6 +375,9 @@
                             <button class="action-btn" title="${esActivo ? 'Desactivar Usuario' : 'Activar Usuario'}" onclick="alternarEstado(${u.id}, '${esActivo ? 'INACTIVO' : 'ACTIVO'}')">
                                 ${esActivo ? '🚫' : '✅'}
                             </button>
+                            <button class="action-btn" title="Eliminar Usuario (Baja lógica)" onclick="eliminarUsuario(${u.id}, '${u.username}')" style="color:#ef4444;">
+                                🗑️
+                            </button>
                         </div>
                     </td>
                 `;
@@ -504,8 +507,8 @@
 
                 cerrarModal();
                 mostrarToast(esEdicion ? "Usuario actualizado correctamente" : "Usuario creado con éxito", "success");
-                cargarUsuarios();
-                cargarEstadisticas();
+                await cargarUsuarios();
+                await cargarEstadisticas();
             } catch (err) {
                 console.error(err);
                 mostrarToast("Error de conexión al guardar usuario", "error");
@@ -524,17 +527,67 @@
                 });
 
                 if (!resp.ok) {
-                    const data = await resp.json();
+                    const data = await resp.json().catch(() => ({}));
                     mostrarToast(data.error || "Error al cambiar estado", "error");
                     return;
                 }
 
                 mostrarToast(`Usuario ${accion === 'activar' ? 'activado' : 'desactivado'} con éxito`, "success");
-                cargarUsuarios();
-                cargarEstadisticas();
+                await cargarUsuarios();
+                await cargarEstadisticas();
             } catch (e) {
                 mostrarToast("Error de conexión con el servidor", "error");
             }
+        }
+
+        async function eliminarUsuario(id, username) {
+            if (!confirm(`¿Está seguro de eliminar al usuario "@${username}"? El usuario será desactivado y no podrá acceder al sistema.`)) return;
+
+            try {
+                const resp = await fetch(`/api/usuarios/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if (!resp.ok) {
+                    const data = await resp.json().catch(() => ({}));
+                    mostrarToast(data.error || "Error al eliminar usuario", "error");
+                    return;
+                }
+
+                mostrarToast(`Usuario "@${username}" eliminado correctamente`, "success");
+                await cargarUsuarios();
+                await cargarEstadisticas();
+            } catch (e) {
+                console.error(e);
+                mostrarToast("Error de conexión al eliminar usuario", "error");
+            }
+        }
+
+        function mostrarToast(mensaje, tipo = "info") {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `toast-notif toast-${tipo}`;
+
+            let icono = 'ℹ️';
+            if (tipo === 'success') icono = '✅';
+            if (tipo === 'error') icono = '⚠️';
+
+            toast.innerHTML = `
+                <span style="font-size:16px;">${icono}</span>
+                <span>${mensaje}</span>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
         }
     </script>
 </body>

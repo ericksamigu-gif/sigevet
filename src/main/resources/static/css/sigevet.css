@@ -6,6 +6,7 @@
 :root {
     --primary: #0f766e;
     --primary-dark: #0d5c4b;
+    --primary-hover: #0d5c4b;
     --primary-light: #ccfbf1;
     --accent-orange: #ff6b35;
     --accent-orange-hover: #ea580c;
@@ -16,7 +17,9 @@
     --card-bg: #ffffff;
     --text-dark: #0f172a;
     --text-muted: #64748b;
+    --text-light: #94a3b8;
     --border-color: #e2e8f0;
+    --radius-sm: 6px;
     --radius-md: 10px;
     --radius-lg: 14px;
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);

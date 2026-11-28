@@ -170,7 +170,16 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="inputDni">DNI (8 dígitos numéricos) <span class="required" style="color:#ef4444; font-weight:800;">*</span></label>
-                        <input type="text" id="inputDni" placeholder="Ej: 74859632" required maxlength="8" pattern="\d{8}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
+                        <div style="display:flex; gap:8px; align-items:stretch;">
+                            <input type="text" id="inputDni" placeholder="Ej: 74859632" required maxlength="8" pattern="\d{8}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)" style="flex:1;">
+                            <button type="button" class="btn-filter-search" id="btnBuscarDni" onclick="buscarDniExterno()" title="Buscar datos por DNI" style="white-space:nowrap; padding:0 14px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                                Buscar
+                            </button>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -228,7 +237,6 @@
 
         <div class="modal-footer">
             <button type="button" class="btn-secondary" onclick="cerrarModalMascotas()">Cerrar</button>
-            <a href="/mascotas" class="btn-primary" style="text-decoration:none;">Ir a Gestión de Mascotas ➜</a>
         </div>
     </div>
 </div>
@@ -579,6 +587,56 @@
     }
 
     /**
+     * Consultar datos del cliente por DNI usando API externa (vía backend)
+     */
+    async function buscarDniExterno() {
+        const inputDni = document.getElementById('inputDni');
+        const btn = document.getElementById('btnBuscarDni');
+        const dni = inputDni.value.trim();
+
+        if (!/^\d{8}$/.test(dni)) {
+            mostrarToast("Ingrese un DNI válido de 8 dígitos numéricos para buscar.", "error");
+            inputDni.focus();
+            return;
+        }
+
+        const htmlOriginal = btn.innerHTML;
+        btn.disabled = true;
+        btn.textContent = "Buscando...";
+
+        try {
+            const resp = await fetch(`/api/clientes/consultar-dni/${dni}`, {
+                headers: { 'Accept': 'application/json' }
+            });
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                mostrarToast(data.error || "No se encontraron datos para ese DNI.", "error");
+                return;
+            }
+
+            if (data.nombres) document.getElementById('inputNombre').value = data.nombres;
+            if (data.apellidos) document.getElementById('inputApellido').value = data.apellidos;
+            if (data.direccion && !document.getElementById('inputDireccion').value.trim()) {
+                document.getElementById('inputDireccion').value = data.direccion;
+            }
+
+            const esNuevo = !document.getElementById('clienteId').value;
+            if (esNuevo && data.yaRegistrado) {
+                mostrarToast("Datos cargados, pero este DNI ya se encuentra registrado en el sistema.", "error");
+            } else {
+                mostrarToast("Datos del cliente obtenidos correctamente.", "success");
+                document.getElementById('inputTelefono').focus();
+            }
+        } catch (error) {
+            mostrarToast("Error de conexión al consultar el DNI.", "error");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = htmlOriginal;
+        }
+    }
+
+    /**
      * Guardar Cliente (POST o PUT)
      */
     async function guardarCliente(e) {
@@ -692,8 +750,7 @@
             if (mascotas.length === 0) {
                 container.innerHTML = `
                     <div style="text-align:center; padding: 24px; color:#64748b;">
-                        <p>Este cliente aún no tiene mascotas vinculadas.</p>
-                        <small>Puedes ingresar a Gestión de Mascotas para asignarle un nuevo paciente.</small>
+                        <p>Este cliente aún no tiene mascotas registradas.</p>
                     </div>
                 `;
                 return;

@@ -1,11 +1,18 @@
 package com.sigevet.controller.api;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sigevet.dto.ClienteDTO;
 import com.sigevet.entity.Cliente;
 import com.sigevet.entity.Mascota;
 import com.sigevet.repository.ClienteRepository;
 import com.sigevet.repository.MascotaRepository;
 import com.sigevet.util.AuditoriaUtil;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -247,5 +254,78 @@ public class ClienteRestController {
         }
         List<Mascota> mascotas = mascotaRepository.findByClienteId(id);
         return ResponseEntity.ok(mascotas);
+    }
+
+    /**
+     * Consultar datos de una persona por DNI usando API pública (apis.net.pe)
+     */
+    @GetMapping("/consultar-dni/{dni}")
+    public ResponseEntity<?> consultarDni(@PathVariable String dni) {
+        String dniLimpio = dni != null ? dni.trim() : "";
+        if (!dniLimpio.matches(REGEX_DNI)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "El DNI debe contener exactamente 8 dígitos numéricos."));
+        }
+
+        try {
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(8))
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.apis.net.pe/v1/dni?numero=" + dniLimpio))
+                    .timeout(Duration.ofSeconds(8))
+                    .header("Accept", "application/json")
+                    .header("User-Agent", "SIGEVET/1.0")
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 200) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "No se encontraron datos para el DNI " + dniLimpio + "."));
+            }
+
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode json = mapper.readTree(response.body());
+
+            String nombresRaw = json.path("nombres").asText("").trim();
+            String apPaternoRaw = json.path("apellidoPaterno").asText("").trim();
+            String apMaternoRaw = json.path("apellidoMaterno").asText("").trim();
+
+            if (nombresRaw.isEmpty() && apPaternoRaw.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "No se encontraron datos válidos para el DNI " + dniLimpio + "."));
+            }
+
+            String nombres = formatearNombrePropio(nombresRaw);
+            String apellidos = formatearNombrePropio((apPaternoRaw + " " + apMaternoRaw).trim());
+            String direccion = json.path("direccion").asText("").trim();
+
+            Map<String, Object> resultado = new HashMap<>();
+            resultado.put("dni", dniLimpio);
+            resultado.put("nombres", nombres);
+            resultado.put("apellidos", apellidos);
+            resultado.put("direccion", direccion);
+            resultado.put("yaRegistrado", clienteRepository.existsByDni(dniLimpio));
+
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("error", "No se pudo consultar el servicio externo de DNI. Puede ingresar los datos manualmente."));
+        }
+    }
+
+    private String formatearNombrePropio(String texto) {
+        if (texto == null || texto.isEmpty()) return "";
+        String[] palabras = texto.toLowerCase().split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (String p : palabras) {
+            if (!p.isEmpty()) {
+                if (sb.length() > 0) sb.append(" ");
+                sb.append(Character.toUpperCase(p.charAt(0))).append(p.substring(1));
+            }
+        }
+        return sb.toString();
     }
 }

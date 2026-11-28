@@ -48,7 +48,7 @@ public class LoginController {
         }
 
         if (auth != null) {
-            model.addAttribute("mensajeInfo", "Debes iniciar sesión con tu token para acceder a las opciones del sistema.");
+            model.addAttribute("mensajeInfo", "Debes iniciar sesión para acceder a las opciones del sistema.");
         }
         if (logout != null) {
             model.addAttribute("mensajeExito", "Has cerrado sesión correctamente.");
